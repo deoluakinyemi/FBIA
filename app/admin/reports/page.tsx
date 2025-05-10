@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Eye } from "lucide-react"
+import { Eye, FileText } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -52,7 +52,7 @@ export default function ReportsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Assessment Reports</CardTitle>
-          <CardDescription>View and manage all completed financial assessments</CardDescription>
+          <CardDescription>View, download PDFs, and manage all completed financial assessments</CardDescription>
         </CardHeader>
         <CardContent>
           {assessments.length === 0 ? (
@@ -81,9 +81,10 @@ export default function ReportsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Link href={`/admin/reports/${assessment.id}`}>
-                        <Button variant="ghost" size="icon">
-                          <Eye className="h-4 w-4" />
-                          <span className="sr-only">View report</span>
+                        <Button variant="ghost" size="sm">
+                          <Eye className="mr-2 h-4 w-4" />
+                          <FileText className="h-4 w-4" />
+                          <span className="sr-only">View and download report</span>
                         </Button>
                       </Link>
                     </TableCell>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Download, Share2, Mail } from "lucide-react"
+import { Mail } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -127,27 +127,6 @@ export default function ResultsPage() {
     processResults()
   }, [toast])
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: "My Financial Health Assessment Results",
-        text: "Check out my financial health assessment results!",
-        url: window.location.href,
-      })
-    } else {
-      // Fallback for browsers that don't support the Web Share API
-      navigator.clipboard
-        .writeText(window.location.href)
-        .then(() => alert("Link copied to clipboard!"))
-        .catch((err) => console.error("Failed to copy: ", err))
-    }
-  }
-
-  const handleDownload = () => {
-    // In a real implementation, this would generate a PDF report
-    alert("This would download a PDF report in a production environment")
-  }
-
   const handleSendEmail = async () => {
     if (!assessmentId || !userEmail) return
 
@@ -219,12 +198,6 @@ export default function ResultsPage() {
           </div>
         </CardContent>
         <CardFooter className="flex justify-center gap-4 flex-wrap">
-          <Button onClick={handleDownload} variant="outline">
-            <Download className="mr-2 h-4 w-4" /> Download Report
-          </Button>
-          <Button onClick={handleShare} variant="outline">
-            <Share2 className="mr-2 h-4 w-4" /> Share Results
-          </Button>
           {userEmail && (
             <Button
               onClick={handleSendEmail}

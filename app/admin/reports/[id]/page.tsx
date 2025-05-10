@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Download, Mail } from "lucide-react"
+import { ArrowLeft, Mail } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import { RadarChart } from "@/components/radar-chart"
 import { getAssessmentDetails } from "@/lib/supabase/assessment-service"
 import { sendAssessmentEmail } from "@/app/actions/email-actions"
 import { useToast } from "@/hooks/use-toast"
+import { PDFDownloadButton } from "@/components/pdf-download-button"
 
 export default function ReportDetailPage({ params }: { params: { id: string } }) {
   const { toast } = useToast()
@@ -82,11 +83,6 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
     }
   }
 
-  const handleDownload = () => {
-    // In a real app, this would generate a PDF report
-    alert("This would download a PDF report in a production environment")
-  }
-
   if (loading) {
     return <div className="py-8 text-center">Loading assessment details...</div>
   }
@@ -140,9 +136,7 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
           </Button>
         </Link>
         <div className="space-x-2">
-          <Button variant="outline" onClick={handleDownload}>
-            <Download className="mr-2 h-4 w-4" /> Download Report
-          </Button>
+          <PDFDownloadButton assessmentId={params.id} userName={assessment.users?.name} />
           <Button onClick={handleSendEmail} disabled={sendingEmail || !assessment.users?.email}>
             <Mail className="mr-2 h-4 w-4" /> {sendingEmail ? "Sending..." : "Email Report"}
           </Button>

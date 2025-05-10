@@ -139,6 +139,44 @@ export interface Database {
           updated_at?: string
         }
       }
+      progress_goals: {
+        Row: {
+          id: string
+          user_id: string
+          pillar_id: string | null
+          title: string
+          target_score: number
+          target_date: string | null
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          pillar_id?: string | null
+          title: string
+          target_score: number
+          target_date?: string | null
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          pillar_id?: string | null
+          title?: string
+          target_score?: number
+          target_date?: string | null
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       questions: {
         Row: {
           id: string
@@ -194,6 +232,35 @@ export interface Database {
           updated_at?: string
         }
       }
+      user_dashboard_settings: {
+        Row: {
+          id: string
+          user_id: string
+          show_progress_chart: boolean
+          show_recommendations: boolean
+          default_view: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          show_progress_chart?: boolean
+          show_recommendations?: boolean
+          default_view?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          show_progress_chart?: boolean
+          show_recommendations?: boolean
+          default_view?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
       users: {
         Row: {
           id: string
@@ -201,6 +268,8 @@ export interface Database {
           name: string | null
           created_at: string
           updated_at: string
+          phone: string | null
+          marketing_consent: boolean | null
         }
         Insert: {
           id?: string
@@ -208,6 +277,8 @@ export interface Database {
           name?: string | null
           created_at?: string
           updated_at?: string
+          phone?: string | null
+          marketing_consent?: boolean | null
         }
         Update: {
           id?: string
@@ -215,6 +286,8 @@ export interface Database {
           name?: string | null
           created_at?: string
           updated_at?: string
+          phone?: string | null
+          marketing_consent?: boolean | null
         }
       }
     }
