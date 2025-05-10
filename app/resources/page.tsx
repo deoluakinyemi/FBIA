@@ -58,7 +58,7 @@ const resourcesData: ResourceCardProps[] = [
   {
     title: "Tax Planning Essentials",
     description: "Maximize your tax benefits and avoid common pitfalls with these essential tax planning strategies.",
-    imageUrl: "/placeholder.svg?height=400&width=600&query=tax+planning+finance",
+    imageUrl: "/tax-planning-finance.png",
     category: "Taxes",
     link: "https://www.irs.gov/individuals/tax-withholding-estimator",
     isExternal: true,
@@ -66,14 +66,14 @@ const resourcesData: ResourceCardProps[] = [
   {
     title: "Home Buying Process",
     description: "A step-by-step guide to the home buying process, from saving for a down payment to closing the deal.",
-    imageUrl: "/placeholder.svg?height=400&width=600&query=home+buying+real+estate",
+    imageUrl: "/home-buying-real-estate.png",
     category: "Real Estate",
     link: "/resources/home-buying",
   },
   {
     title: "Financial Planning for Families",
     description: "Learn how to create a financial plan that addresses the unique needs and goals of your family.",
-    imageUrl: "/placeholder.svg?height=400&width=600&query=family+financial+planning",
+    imageUrl: "/family-financial-planning.png",
     category: "Family Finance",
     link: "/resources/family-planning",
   },
@@ -141,7 +141,7 @@ export default function ResourcesPage() {
         </p>
         <a
           href="/assessment/start"
-          className="inline-block px-6 py-3 bg-nairawise-gold text-nairawise-dark font-medium rounded-md hover:bg-opacity-90 transition-all"
+          className="inline-block px-6 py-3 bg-nairawise-cta hover:bg-nairawise-cta/90 text-white font-medium rounded-md hover:bg-opacity-90 transition-all"
         >
           Take Financial Assessment
         </a>
