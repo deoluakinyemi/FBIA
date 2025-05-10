@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { cn } from "@/lib/utils"
 
 interface ResourceCategoryTabsProps {
   categories: string[]
@@ -9,7 +8,7 @@ interface ResourceCategoryTabsProps {
 }
 
 export function ResourceCategoryTabs({ categories, onSelectCategory }: ResourceCategoryTabsProps) {
-  const [activeCategory, setActiveCategory] = useState<string>("All")
+  const [activeCategory, setActiveCategory] = useState("All")
 
   const handleCategoryClick = (category: string) => {
     setActiveCategory(category)
@@ -17,13 +16,12 @@ export function ResourceCategoryTabs({ categories, onSelectCategory }: ResourceC
   }
 
   return (
-    <div className="flex flex-wrap gap-2 mb-8">
+    <div className="flex flex-wrap justify-center gap-2 mb-8">
       <button
         onClick={() => handleCategoryClick("All")}
-        className={cn(
-          "px-4 py-2 rounded-full transition-all",
-          activeCategory === "All" ? "bg-nairawise-dark text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200",
-        )}
+        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+          activeCategory === "All" ? "bg-nairawise-dark text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+        }`}
       >
         All
       </button>
@@ -31,12 +29,9 @@ export function ResourceCategoryTabs({ categories, onSelectCategory }: ResourceC
         <button
           key={category}
           onClick={() => handleCategoryClick(category)}
-          className={cn(
-            "px-4 py-2 rounded-full transition-all",
-            activeCategory === category
-              ? "bg-nairawise-dark text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200",
-          )}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            activeCategory === category ? "bg-nairawise-dark text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
         >
           {category}
         </button>

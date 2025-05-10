@@ -1,28 +1,69 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getFooterSettings, getQuickLinks } from "@/lib/supabase/footer-service"
 
-export async function Footer() {
+// Default footer data
+const defaultSettings = {
+  address: "123 Financial District, Lagos, Nigeria",
+  phone: "+234 123 456 7890",
+  email: "info@nairawise.com",
+  facebook_url: "https://facebook.com",
+  twitter_url: "https://twitter.com",
+  instagram_url: "https://instagram.com",
+  linkedin_url: "https://linkedin.com",
+  copyright_text: "NairaWise. All rights reserved.",
+  newsletter_enabled: true,
+  newsletter_text: "Subscribe to our newsletter for financial tips and updates.",
+}
+
+const defaultQuickLinks = [
+  { id: "1", title: "Home", url: "/", display_order: 1 },
+  { id: "2", title: "Take Assessment", url: "/assessment/start", display_order: 2 },
+  { id: "3", title: "Dashboard", url: "/dashboard", display_order: 3 },
+  { id: "4", title: "Resources", url: "/resources", display_order: 4 },
+  { id: "5", title: "About Us", url: "/about", display_order: 5 },
+]
+
+export function Footer() {
   const currentYear = new Date().getFullYear()
-  const footerSettings = await getFooterSettings()
-  const quickLinks = await getQuickLinks()
+  const [settings, setSettings] = useState(defaultSettings)
+  const [quickLinks, setQuickLinks] = useState(defaultQuickLinks)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Fallback values if database fetch fails
-  const settings = footerSettings || {
-    address: "123 Financial District, Lagos, Nigeria",
-    phone: "+234 123 456 7890",
-    email: "info@nairawise.com",
-    facebook_url: "https://facebook.com",
-    twitter_url: "https://twitter.com",
-    instagram_url: "https://instagram.com",
-    linkedin_url: "https://linkedin.com",
-    copyright_text: "NairaWise. All rights reserved.",
-    newsletter_enabled: true,
-    newsletter_text: "Subscribe to our newsletter for financial tips and updates.",
-  }
+  // Fetch footer data from API
+  useEffect(() => {
+    const fetchFooterData = async () => {
+      try {
+        // Try to fetch settings from API
+        const settingsResponse = await fetch("/api/footer/settings")
+        if (settingsResponse.ok) {
+          const settingsData = await settingsResponse.json()
+          setSettings(settingsData)
+        }
+
+        // Try to fetch quick links from API
+        const linksResponse = await fetch("/api/footer/links")
+        if (linksResponse.ok) {
+          const linksData = await linksResponse.json()
+          if (Array.isArray(linksData) && linksData.length > 0) {
+            setQuickLinks(linksData)
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching footer data:", error)
+        // Keep using default data on error
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchFooterData()
+  }, [])
 
   return (
     <footer className="bg-nairawise-dark text-white pt-12 pb-6">
@@ -51,36 +92,13 @@ export async function Footer() {
           <div>
             <h3 className="text-nairawise-gold font-semibold text-lg mb-4">Quick Links</h3>
             <ul className="space-y-2">
-              {quickLinks.length > 0 ? (
-                quickLinks.map((link) => (
-                  <li key={link.id}>
-                    <Link href={link.url} className="text-gray-300 hover:text-nairawise-gold transition-colors">
-                      {link.title}
-                    </Link>
-                  </li>
-                ))
-              ) : (
-                <>
-                  <li>
-                    <Link href="/" className="text-gray-300 hover:text-nairawise-gold transition-colors">
-                      Home
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/assessment/start"
-                      className="text-gray-300 hover:text-nairawise-gold transition-colors"
-                    >
-                      Take Assessment
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/dashboard" className="text-gray-300 hover:text-nairawise-gold transition-colors">
-                      Dashboard
-                    </Link>
-                  </li>
-                </>
-              )}
+              {quickLinks.map((link) => (
+                <li key={link.id}>
+                  <Link href={link.url} className="text-gray-300 hover:text-nairawise-gold transition-colors">
+                    {link.title}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 

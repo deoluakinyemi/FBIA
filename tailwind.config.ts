@@ -55,11 +55,11 @@ const config = {
         },
         // NairaWise brand colors
         nairawise: {
-          dark: "#0A4D3C", // Deep forest green
-          medium: "#6A9B5E", // Medium green
-          light: "#8CB369", // Light green
-          gold: "#D4B95E", // Gold accent
-          cream: "#F7F3E3", // Cream background
+          dark: "hsl(var(--nairawise-dark))",
+          medium: "hsl(var(--nairawise-medium))",
+          light: "hsl(var(--nairawise-light))",
+          gold: "hsl(var(--nairawise-gold))",
+          cream: "hsl(var(--nairawise-cream))",
         },
       },
       borderRadius: {
