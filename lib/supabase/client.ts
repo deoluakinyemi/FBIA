@@ -6,12 +6,7 @@ import type { Database } from "./database.types"
 // Create a singleton instance of the Supabase client
 let supabaseClient: ReturnType<typeof createSupabaseClient<Database>> | null = null
 
-// Original function name for backward compatibility
-export function createClient() {
-  return createClientClient()
-}
-
-// New function name
+// This function is ONLY for client components
 export function createClientClient() {
   if (supabaseClient) return supabaseClient
 
@@ -24,4 +19,9 @@ export function createClientClient() {
 
   supabaseClient = createSupabaseClient<Database>(supabaseUrl, supabaseKey)
   return supabaseClient
+}
+
+// For backward compatibility - but should only be used in client components
+export function createClient() {
+  return createClientClient()
 }
