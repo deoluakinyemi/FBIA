@@ -7,26 +7,58 @@ import { Download, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { calculateScores, getRecommendations } from "@/lib/scoring"
 import { RadarChart } from "@/components/radar-chart"
 import { PillarScoreCard } from "@/components/pillar-score-card"
+import { getAssessmentDetails } from "@/lib/supabase/assessment-service"
 
 export default function ResultsPage() {
+  const [assessment, setAssessment] = useState<any>(null)
   const [scores, setScores] = useState<Record<string, number>>({})
   const [recommendations, setRecommendations] = useState<Record<string, string[]>>({})
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const storedResults = localStorage.getItem("assessmentResults")
-    if (storedResults) {
-      const answers = JSON.parse(storedResults)
-      const calculatedScores = calculateScores(answers)
-      const calculatedRecommendations = getRecommendations(calculatedScores)
+    async function loadResults() {
+      try {
+        // Get assessment ID from localStorage
+        const assessmentId = localStorage.getItem("currentAssessmentId")
+        if (!assessmentId) {
+          setError("No assessment found. Please complete the assessment first.")
+          setLoading(false)
+          return
+        }
 
-      setScores(calculatedScores)
-      setRecommendations(calculatedRecommendations)
+        // Get assessment details from Supabase
+        const assessmentDetails = await getAssessmentDetails(assessmentId)
+        if (!assessmentDetails) {
+          setError("Assessment not found. Please complete the assessment again.")
+          setLoading(false)
+          return
+        }
+
+        setAssessment(assessmentDetails)
+
+        // Extract pillar scores
+        const pillarScoresMap: Record<string, number> = {}
+        assessmentDetails.pillarScores.forEach((score: any) => {
+          pillarScoresMap[score.pillars.slug] = score.score
+        })
+        setScores(pillarScoresMap)
+
+        // For now, use hardcoded recommendations
+        // In a real app, these would come from the database
+        setRecommendations(getRecommendations(pillarScoresMap))
+
+        setLoading(false)
+      } catch (err) {
+        console.error("Error loading results:", err)
+        setError("An error occurred while loading your results.")
+        setLoading(false)
+      }
     }
-    setLoading(false)
+
+    loadResults()
   }, [])
 
   const handleShare = () => {
@@ -54,7 +86,19 @@ export default function ResultsPage() {
     return <div className="container py-12 text-center">Loading your results...</div>
   }
 
-  if (Object.keys(scores).length === 0) {
+  if (error) {
+    return (
+      <div className="container py-12 text-center">
+        <h1 className="text-2xl font-bold mb-4">Error</h1>
+        <p className="mb-6">{error}</p>
+        <Link href="/assessment">
+          <Button>Take the Assessment</Button>
+        </Link>
+      </div>
+    )
+  }
+
+  if (!assessment) {
     return (
       <div className="container py-12 text-center">
         <h1 className="text-2xl font-bold mb-4">No assessment results found</h1>
@@ -66,7 +110,7 @@ export default function ResultsPage() {
     )
   }
 
-  const overallScore = Object.values(scores).reduce((sum, score) => sum + score, 0) / Object.keys(scores).length
+  const overallScore = assessment.overall_score
 
   return (
     <div className="container max-w-4xl py-12">
@@ -170,4 +214,156 @@ export default function ResultsPage() {
       </Card>
     </div>
   )
+}
+
+// Temporary function to generate recommendations
+// In a real app, these would come from the database
+function getRecommendations(scores: Record<string, number>): Record<string, string[]> {
+  const recommendations: Record<string, string[]> = {}
+
+  // Awareness recommendations
+  if (scores.awareness < 0.6) {
+    recommendations.awareness = [
+      "Set up a system to track all your income and expenses",
+      "Schedule monthly financial review sessions",
+      "Subscribe to financial news sources or podcasts",
+      "Take a basic financial literacy course",
+      "Create a detailed list of all your assets and liabilities",
+    ]
+  } else {
+    recommendations.awareness = [
+      "Deepen your understanding of advanced financial concepts",
+      "Set up more detailed tracking of investment performance",
+      "Analyze economic trends that might affect your specific financial situation",
+      "Consider working with a financial advisor for specialized knowledge",
+    ]
+  }
+
+  // Goals recommendations
+  if (scores.goals < 0.6) {
+    recommendations.goals = [
+      "Define 3-5 specific, measurable financial goals with deadlines",
+      "Break down each goal into smaller, actionable steps",
+      "Create a vision board or written statement about your financial future",
+      "Schedule quarterly reviews of your progress toward goals",
+      "Adjust unrealistic goals to be challenging but achievable",
+    ]
+  } else {
+    recommendations.goals = [
+      "Create more detailed implementation plans for each goal",
+      "Set up automated systems to support your goals",
+      "Add stretch goals to push your financial growth",
+      "Develop contingency plans for potential obstacles",
+    ]
+  }
+
+  // Habits recommendations
+  if (scores.habits < 0.6) {
+    recommendations.habits = [
+      "Set up automatic transfers to savings on payday",
+      "Implement a 24-hour rule before making non-essential purchases",
+      "Track all spending for 30 days to identify patterns",
+      "Schedule 15 minutes weekly for financial management",
+      "Create a system for handling financial windfalls before they occur",
+    ]
+  } else {
+    recommendations.habits = [
+      "Optimize your financial automation systems",
+      "Develop more sophisticated tracking methods",
+      "Create accountability systems for your financial habits",
+      "Share your knowledge by mentoring others",
+    ]
+  }
+
+  // Mindsets recommendations
+  if (scores.mindsets < 0.6) {
+    recommendations.mindsets = [
+      "Read books on financial mindset and psychology of money",
+      "Practice gratitude for your current financial situation while working to improve it",
+      "Challenge negative beliefs about money with evidence",
+      "Find role models who have achieved what you want to achieve",
+      "Journal about your emotional reactions to financial events",
+    ]
+  } else {
+    recommendations.mindsets = [
+      "Mentor others on developing healthy money mindsets",
+      "Explore more advanced wealth psychology concepts",
+      "Challenge yourself to take calculated financial risks",
+      "Develop systems to maintain optimism during market downturns",
+    ]
+  }
+
+  // Assets recommendations
+  if (scores.assets < 0.6) {
+    recommendations.assets = [
+      "Start investing regularly, even with small amounts",
+      "Learn about different asset classes and their characteristics",
+      "Set up automatic investments into index funds or other diversified assets",
+      "Explore ways to generate passive income from your skills or resources",
+      "Create a plan to gradually increase your investment percentage",
+    ]
+  } else {
+    recommendations.assets = [
+      "Optimize your asset allocation for your specific goals",
+      "Explore more sophisticated investment strategies",
+      "Consider alternative investments to further diversify",
+      "Develop systems to increase your passive income streams",
+    ]
+  }
+
+  // Liabilities recommendations
+  if (scores.liabilities < 0.6) {
+    recommendations.liabilities = [
+      "List all debts with interest rates and minimum payments",
+      "Create a debt repayment strategy (snowball or avalanche method)",
+      "Consolidate high-interest debt if possible",
+      "Negotiate with creditors for better terms",
+      "Develop criteria for when to take on new debt",
+    ]
+  } else {
+    recommendations.liabilities = [
+      "Optimize your debt repayment strategy",
+      "Consider leveraging strategic debt for asset acquisition",
+      "Refinance existing debt to better terms",
+      "Develop a more sophisticated approach to using credit",
+    ]
+  }
+
+  // Income recommendations
+  if (scores.income < 0.6) {
+    recommendations.income = [
+      "Identify skills you can develop to increase your primary income",
+      "Explore side hustle opportunities aligned with your skills",
+      "Network strategically in your industry",
+      "Research salary ranges for your position and prepare for negotiation",
+      "Set specific income growth targets for 1, 3, and 5 years",
+    ]
+  } else {
+    recommendations.income = [
+      "Develop more passive income streams",
+      "Consider entrepreneurial opportunities",
+      "Optimize your existing income streams for efficiency",
+      "Explore ways to scale your highest-performing income sources",
+    ]
+  }
+
+  // Expenses recommendations
+  if (scores.expenses < 0.6) {
+    recommendations.expenses = [
+      "Create a detailed budget aligned with your values",
+      "Identify and eliminate unnecessary recurring expenses",
+      "Implement a category-based spending plan",
+      "Practice zero-based budgeting for one month",
+      "Audit your subscriptions and memberships",
+    ]
+  } else {
+    recommendations.expenses = [
+      "Optimize spending to maximize value rather than just cutting costs",
+      "Implement more sophisticated budgeting techniques",
+      "Develop systems to automatically categorize and analyze expenses",
+      "Create spending policies for different areas of your life",
+    ]
+  }
+
+  return recommendations
 }

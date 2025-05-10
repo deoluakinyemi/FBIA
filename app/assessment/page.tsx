@@ -9,32 +9,50 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Progress } from "@/components/ui/progress"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { getQuestions } from "@/lib/admin-questions"
+import { getAllQuestionsWithOptions } from "@/lib/supabase/assessment-service"
+import type { Question } from "@/lib/supabase/assessment-service"
 
 export default function AssessmentPage() {
   const router = useRouter()
-  const [questions, setQuestions] = useState<Record<string, any>>({})
+  const [questions, setQuestions] = useState<Record<string, Question[]>>({})
+  const [pillars, setPillars] = useState<string[]>([])
   const [currentPillarIndex, setCurrentPillarIndex] = useState(0)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, number>>({})
+  const [answers, setAnswers] = useState<Record<string, { questionId: string; optionId: string; score: number }>>({})
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Load questions
-    const loadedQuestions = getQuestions()
-    setQuestions(loadedQuestions)
-    setLoading(false)
+    async function loadQuestions() {
+      try {
+        const questionsData = await getAllQuestionsWithOptions()
+        setQuestions(questionsData)
+        setPillars(Object.keys(questionsData))
+        setLoading(false)
+      } catch (error) {
+        console.error("Error loading questions:", error)
+        setLoading(false)
+      }
+    }
+
+    loadQuestions()
   }, [])
 
   if (loading) {
     return <div className="container py-12 text-center">Loading assessment questions...</div>
   }
 
-  const pillars = Object.keys(questions)
+  if (pillars.length === 0) {
+    return <div className="container py-12 text-center">No questions found. Please try again later.</div>
+  }
+
   const currentPillar = pillars[currentPillarIndex]
-  const currentPillarQuestions = questions[currentPillar]
+  const currentPillarQuestions = questions[currentPillar] || []
   const currentQuestion = currentPillarQuestions[currentQuestionIndex]
+
+  if (!currentQuestion) {
+    return <div className="container py-12 text-center">Question not found. Please try again later.</div>
+  }
 
   const totalQuestions = Object.values(questions).reduce((acc, pillarQuestions) => acc + pillarQuestions.length, 0)
   const answeredQuestions = Object.keys(answers).length
@@ -47,25 +65,40 @@ export default function AssessmentPage() {
     if (!selectedOption) return
 
     // Save the answer
-    const questionId = `${currentPillar}-${currentQuestionIndex}`
-    setAnswers({ ...answers, [questionId]: Number.parseInt(selectedOption) })
+    const questionId = currentQuestion.id
+    const optionId = selectedOption
+    const selectedOptionObj = currentQuestion.options.find((opt) => opt.id === optionId)
+    const score = selectedOptionObj ? selectedOptionObj.score : 0
+
+    const answerKey = `${currentPillar}-${currentQuestionIndex}`
+    setAnswers({
+      ...answers,
+      [answerKey]: {
+        questionId,
+        optionId,
+        score,
+      },
+    })
 
     // Move to next question or pillar
     if (isLastQuestionInPillar) {
       if (isLastPillar) {
-        // Assessment complete, navigate to results
+        // Assessment complete, save to localStorage temporarily
+        // In the next step, we'll save to Supabase
         localStorage.setItem(
-          "assessmentResults",
-          JSON.stringify({ ...answers, [questionId]: Number.parseInt(selectedOption) }),
+          "assessmentAnswers",
+          JSON.stringify({
+            ...answers,
+            [answerKey]: {
+              questionId,
+              optionId,
+              score,
+            },
+          }),
         )
 
-        // Increment completed assessments count
-        const completedAssessments = localStorage.getItem("completedAssessments")
-          ? Number.parseInt(localStorage.getItem("completedAssessments") || "0") + 1
-          : 1
-        localStorage.setItem("completedAssessments", completedAssessments.toString())
-
-        router.push("/assessment/results")
+        // Navigate to user info collection before results
+        router.push("/assessment/user-info")
       } else {
         // Move to next pillar
         setCurrentPillarIndex(currentPillarIndex + 1)
@@ -84,20 +117,22 @@ export default function AssessmentPage() {
       setCurrentQuestionIndex(currentQuestionIndex - 1)
     } else if (currentPillarIndex > 0) {
       setCurrentPillarIndex(currentPillarIndex - 1)
-      setCurrentQuestionIndex(questions[pillars[currentPillarIndex - 1]].length - 1)
+      const prevPillarQuestions = questions[pillars[currentPillarIndex - 1]] || []
+      setCurrentQuestionIndex(prevPillarQuestions.length - 1)
     }
 
     // Restore previous answer if available
     const prevQuestionId =
       currentQuestionIndex > 0
         ? `${currentPillar}-${currentQuestionIndex - 1}`
-        : `${pillars[currentPillarIndex - 1]}-${questions[pillars[currentPillarIndex - 1]].length - 1}`
+        : `${pillars[currentPillarIndex - 1]}-${(questions[pillars[currentPillarIndex - 1]] || []).length - 1}`
 
-    setSelectedOption(answers[prevQuestionId]?.toString() || null)
+    const prevAnswer = answers[prevQuestionId]
+    setSelectedOption(prevAnswer?.optionId || null)
   }
 
-  const getPillarTitle = (pillarKey: string) => {
-    const titles: Record<string, string> = {
+  const getPillarTitle = (pillarSlug: string) => {
+    const pillarTitles: Record<string, string> = {
       awareness: "Financial Awareness",
       goals: "Goal Setting",
       habits: "Financial Habits",
@@ -107,7 +142,7 @@ export default function AssessmentPage() {
       income: "Income Streams",
       expenses: "Expense Control",
     }
-    return titles[pillarKey] || pillarKey
+    return pillarTitles[pillarSlug] || pillarSlug
   }
 
   return (
@@ -133,11 +168,11 @@ export default function AssessmentPage() {
         </CardHeader>
         <CardContent>
           <RadioGroup value={selectedOption || ""} onValueChange={setSelectedOption}>
-            {currentQuestion.options.map((option: string, index: number) => (
-              <div key={index} className="flex items-center space-x-2 py-2">
-                <RadioGroupItem value={index.toString()} id={`option-${index}`} />
-                <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
-                  {option}
+            {currentQuestion.options.map((option) => (
+              <div key={option.id} className="flex items-center space-x-2 py-2">
+                <RadioGroupItem value={option.id} id={`option-${option.id}`} />
+                <Label htmlFor={`option-${option.id}`} className="flex-1 cursor-pointer">
+                  {option.option_text}
                 </Label>
               </div>
             ))}
