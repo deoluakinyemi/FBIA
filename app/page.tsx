@@ -25,6 +25,7 @@ export default function Home() {
                   <ChevronRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
+              {/* Removed Admin Dashboard button */}
             </div>
             <div className="md:w-1/2 flex justify-center">
               <Image

@@ -7,6 +7,8 @@ export default function AdminLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // The authentication check is handled by the Sidebar component
+  // which redirects to login if not authenticated
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />

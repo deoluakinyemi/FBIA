@@ -40,9 +40,7 @@ export function Header() {
             <Link href="/assessment/start" className="text-nairawise-dark hover:text-nairawise-medium font-medium">
               Assessment
             </Link>
-            <Link href="/dashboard" className="text-nairawise-dark hover:text-nairawise-medium font-medium">
-              Dashboard
-            </Link>
+            {/* Removed Admin Dashboard link */}
             <Link href="/resources" className="text-nairawise-dark hover:text-nairawise-medium font-medium">
               Resources
             </Link>
@@ -90,13 +88,7 @@ export function Header() {
             >
               Assessment
             </Link>
-            <Link
-              href="/dashboard"
-              className="text-xl font-medium text-nairawise-dark hover:text-nairawise-medium"
-              onClick={toggleMenu}
-            >
-              Dashboard
-            </Link>
+            {/* Removed Admin Dashboard link */}
             <Link
               href="/resources"
               className="text-xl font-medium text-nairawise-dark hover:text-nairawise-medium"

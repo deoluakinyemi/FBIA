@@ -89,3 +89,7 @@ const config = {
 } satisfies Config
 
 export default config
+// Remove any styles that might be creating the white box in the header or other components
+// This might be related to a notification or alert component
+
+// If there are specific background or border styles creating this white box, remove or modify them

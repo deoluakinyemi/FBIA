@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, Lock } from "lucide-react"
 import Image from "next/image"
@@ -26,6 +26,14 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    // Check if already authenticated
+    const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true"
+    if (adminAuthenticated) {
+      router.push("/admin/dashboard")
+    }
+  }, [router])
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
@@ -106,11 +114,7 @@ export default function AdminLoginPage() {
             </div>
           </CardContent>
           <CardFooter className="bg-nairawise-cream rounded-b-lg">
-            <Button
-              type="submit"
-              className="w-full bg-nairawise-dark hover:bg-nairawise-dark/90 text-white"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white" disabled={isLoading}>
               {isLoading ? "Logging in..." : "Login"}
               {!isLoading && <Lock className="ml-2 h-4 w-4" />}
             </Button>
