@@ -53,6 +53,14 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // NairaWise brand colors
+        nairawise: {
+          dark: "#0A4D3C", // Deep forest green
+          medium: "#6A9B5E", // Medium green
+          light: "#8CB369", // Light green
+          gold: "#D4B95E", // Gold accent
+          cream: "#F7F3E3", // Cream background
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

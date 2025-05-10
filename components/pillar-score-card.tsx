@@ -4,9 +4,10 @@ interface PillarScoreCardProps {
   pillar: string
   score: number
   recommendations: string[]
+  className?: string
 }
 
-export function PillarScoreCard({ pillar, score, recommendations }: PillarScoreCardProps) {
+export function PillarScoreCard({ pillar, score, recommendations, className = "" }: PillarScoreCardProps) {
   const pillarTitles: Record<string, string> = {
     awareness: "Financial Awareness",
     goals: "Goal Setting",
@@ -28,18 +29,18 @@ export function PillarScoreCard({ pillar, score, recommendations }: PillarScoreC
 
   const scoreColor = (): string => {
     if (score >= 0.8) return "text-green-600"
-    if (score >= 0.6) return "text-emerald-600"
+    if (score >= 0.6) return "text-nairawise-medium"
     if (score >= 0.4) return "text-amber-600"
     if (score >= 0.2) return "text-orange-600"
     return "text-red-600"
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle>{pillarTitles[pillar] || pillar}</CardTitle>
+    <Card className={`nairawise-shadow ${className}`}>
+      <CardHeader className="pb-2 bg-nairawise-cream">
+        <CardTitle className="text-nairawise-dark">{pillarTitles[pillar] || pillar}</CardTitle>
         <CardDescription className="flex justify-between items-center">
-          <span>Your score</span>
+          <span className="text-nairawise-dark/70">Your score</span>
           <span className={`font-medium ${scoreColor()}`}>
             {Math.round(score * 10)}/10 - {scoreText()}
           </span>
@@ -47,10 +48,10 @@ export function PillarScoreCard({ pillar, score, recommendations }: PillarScoreC
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          <h4 className="text-sm font-medium">Recommendations:</h4>
+          <h4 className="text-sm font-medium text-nairawise-dark">Recommendations:</h4>
           <ul className="text-sm space-y-1">
             {recommendations.map((recommendation, index) => (
-              <li key={index} className="list-disc ml-5">
+              <li key={index} className="list-disc ml-5 text-nairawise-dark/70">
                 {recommendation}
               </li>
             ))}

@@ -75,47 +75,58 @@ export default function StartAssessmentPage() {
 
   return (
     <div className="container max-w-md py-12">
-      <Card>
-        <CardHeader>
+      <Card className="nairawise-card nairawise-shadow">
+        <CardHeader className="bg-gradient-to-r from-nairawise-dark to-nairawise-medium text-white rounded-t-lg">
           <CardTitle>Before You Begin</CardTitle>
-          <CardDescription>Please provide your contact information to start the financial assessment.</CardDescription>
+          <CardDescription className="text-white/90">
+            Please provide your contact information to start the financial assessment.
+          </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div className="space-y-2">
-              <Label htmlFor="name">Your Name</Label>
+              <Label htmlFor="name" className="text-nairawise-dark">
+                Your Name
+              </Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your full name"
+                className="border-nairawise-medium/30 focus-visible:ring-nairawise-dark"
               />
               {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email" className="text-nairawise-dark">
+                Email Address
+              </Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
+                className="border-nairawise-medium/30 focus-visible:ring-nairawise-dark"
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-nairawise-dark/70">
                 We'll use this to send you your results and follow-up recommendations.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number (Optional)</Label>
+              <Label htmlFor="phone" className="text-nairawise-dark">
+                Phone Number (Optional)
+              </Label>
               <Input
                 id="phone"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Enter your phone number"
+                className="border-nairawise-medium/30 focus-visible:ring-nairawise-dark"
               />
               {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
             </div>
@@ -125,16 +136,21 @@ export default function StartAssessmentPage() {
                 id="marketing"
                 checked={acceptMarketing}
                 onCheckedChange={(checked) => setAcceptMarketing(checked as boolean)}
+                className="border-nairawise-medium data-[state=checked]:bg-nairawise-dark data-[state=checked]:border-nairawise-dark"
               />
-              <Label htmlFor="marketing" className="text-sm font-normal">
+              <Label htmlFor="marketing" className="text-sm font-normal text-nairawise-dark">
                 I agree to receive follow-up communications about my financial assessment results.
               </Label>
             </div>
 
             {errors.submit && <p className="text-sm text-destructive">{errors.submit}</p>}
           </CardContent>
-          <CardFooter>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <CardFooter className="bg-nairawise-cream rounded-b-lg">
+            <Button
+              type="submit"
+              className="w-full bg-nairawise-dark hover:bg-nairawise-dark/90 text-white"
+              disabled={isSubmitting}
+            >
               {isSubmitting ? "Saving..." : "Start Assessment"}
               {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
             </Button>

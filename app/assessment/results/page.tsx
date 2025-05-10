@@ -157,10 +157,10 @@ export default function ResultsPage() {
   if (error) {
     return (
       <div className="container py-12 text-center">
-        <h1 className="text-2xl font-bold mb-4">Error</h1>
-        <p className="mb-6">{error}</p>
+        <h1 className="text-2xl font-bold mb-4 text-nairawise-dark">Error</h1>
+        <p className="mb-6 text-nairawise-dark/80">{error}</p>
         <Link href="/assessment/start">
-          <Button>Restart Assessment</Button>
+          <Button className="bg-nairawise-dark hover:bg-nairawise-dark/90 text-white">Restart Assessment</Button>
         </Link>
       </div>
     )
@@ -169,25 +169,27 @@ export default function ResultsPage() {
   return (
     <div className="container max-w-4xl py-12">
       <div className="mb-8 space-y-4">
-        <h1 className="text-3xl font-bold">Your Financial Health Results</h1>
+        <h1 className="text-3xl font-bold text-nairawise-dark">Your Financial Health Results</h1>
         {userName && (
-          <p className="text-xl">
+          <p className="text-xl text-nairawise-dark/80">
             Hello, <span className="font-medium">{userName}</span>! Here's your personalized financial assessment.
           </p>
         )}
-        <p className="text-muted-foreground">
+        <p className="text-nairawise-dark/70">
           Based on your responses, we've analyzed your financial health across 8 key pillars.
         </p>
       </div>
 
-      <Card className="mb-8">
-        <CardHeader>
+      <Card className="mb-8 nairawise-card nairawise-shadow">
+        <CardHeader className="bg-gradient-to-r from-nairawise-dark to-nairawise-medium text-white rounded-t-lg">
           <CardTitle>Overall Financial Health Score</CardTitle>
-          <CardDescription>Your overall score is calculated as an average of all financial pillars.</CardDescription>
+          <CardDescription className="text-white/90">
+            Your overall score is calculated as an average of all financial pillars.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col items-center">
-          <div className="text-6xl font-bold mb-4">{Math.round(overallScore * 10)}/10</div>
-          <div className="text-lg text-center max-w-md">
+        <CardContent className="flex flex-col items-center pt-6">
+          <div className="text-6xl font-bold mb-4 text-nairawise-dark">{Math.round(overallScore * 10)}/10</div>
+          <div className="text-lg text-center max-w-md text-nairawise-dark/80">
             {overallScore >= 0.8
               ? "Excellent! You have a strong financial foundation."
               : overallScore >= 0.6
@@ -197,12 +199,17 @@ export default function ResultsPage() {
                   : "Needs improvement. Focus on building your financial foundation."}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-center gap-4 flex-wrap">
+        <CardFooter className="flex justify-center gap-4 flex-wrap bg-nairawise-cream rounded-b-lg">
           {userEmail && (
             <Button
               onClick={handleSendEmail}
               disabled={sendingEmail || emailSent}
               variant={emailSent ? "outline" : "default"}
+              className={
+                emailSent
+                  ? "border-nairawise-dark text-nairawise-dark"
+                  : "bg-nairawise-dark hover:bg-nairawise-dark/90 text-white"
+              }
             >
               <Mail className="mr-2 h-4 w-4" />
               {sendingEmail ? "Sending..." : emailSent ? "Email Sent" : "Email Results"}
@@ -212,15 +219,27 @@ export default function ResultsPage() {
       </Card>
 
       <Tabs defaultValue="overview" className="mb-8">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="detailed">Detailed Analysis</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 bg-nairawise-cream">
+          <TabsTrigger
+            value="overview"
+            className="data-[state=active]:bg-nairawise-dark data-[state=active]:text-white"
+          >
+            Overview
+          </TabsTrigger>
+          <TabsTrigger
+            value="detailed"
+            className="data-[state=active]:bg-nairawise-dark data-[state=active]:text-white"
+          >
+            Detailed Analysis
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Financial Health Overview</CardTitle>
-              <CardDescription>This chart shows your score in each financial pillar.</CardDescription>
+          <Card className="nairawise-shadow">
+            <CardHeader className="bg-nairawise-cream">
+              <CardTitle className="text-nairawise-dark">Financial Health Overview</CardTitle>
+              <CardDescription className="text-nairawise-dark/70">
+                This chart shows your score in each financial pillar.
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex justify-center py-4">
               <div className="w-full max-w-md aspect-square">
@@ -231,36 +250,39 @@ export default function ResultsPage() {
         </TabsContent>
         <TabsContent value="detailed" className="pt-4">
           <div className="grid gap-6 sm:grid-cols-2">
-            {Object.entries(scores).map(([pillar, score]) => (
+            {Object.entries(scores).map(([pillar, score], index) => (
               <PillarScoreCard
                 key={pillar}
                 pillar={pillar}
                 score={score}
                 recommendations={recommendations[pillar] || []}
+                className={index % 2 === 0 ? "border-t-4 border-nairawise-medium" : "border-t-4 border-nairawise-gold"}
               />
             ))}
           </div>
         </TabsContent>
       </Tabs>
 
-      <Card>
-        <CardHeader>
+      <Card className="nairawise-card nairawise-shadow">
+        <CardHeader className="bg-gradient-to-r from-nairawise-dark to-nairawise-medium text-white rounded-t-lg">
           <CardTitle>Next Steps</CardTitle>
-          <CardDescription>Based on your results, here are the key areas to focus on:</CardDescription>
+          <CardDescription className="text-white/90">
+            Based on your results, here are the key areas to focus on:
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <div className="space-y-4">
             {Object.entries(scores)
               .sort(([, scoreA], [, scoreB]) => scoreA - scoreB)
               .slice(0, 3)
               .map(([pillar, score]) => (
                 <div key={pillar} className="space-y-2">
-                  <h3 className="font-medium capitalize">
+                  <h3 className="font-medium capitalize text-nairawise-dark">
                     {pillar} ({Math.round(score * 10)}/10)
                   </h3>
                   <ul className="list-disc pl-5 space-y-1">
                     {recommendations[pillar]?.slice(0, 2).map((rec, index) => (
-                      <li key={index} className="text-sm text-muted-foreground">
+                      <li key={index} className="text-sm text-nairawise-dark/70">
                         {rec}
                       </li>
                     ))}
@@ -269,14 +291,14 @@ export default function ResultsPage() {
               ))}
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <p className="text-center text-sm text-muted-foreground">
+        <CardFooter className="flex flex-col space-y-4 bg-nairawise-cream rounded-b-lg">
+          <p className="text-center text-sm text-nairawise-dark/70">
             {emailSent ? "We've sent your detailed results to your email. " : ""}
             We'll be in touch soon to schedule your complimentary clarity session to discuss your results and next
             steps.
           </p>
           <Link href="/" className="w-full">
-            <Button className="w-full">Return to Home</Button>
+            <Button className="w-full bg-nairawise-dark hover:bg-nairawise-dark/90 text-white">Return to Home</Button>
           </Link>
         </CardFooter>
       </Card>
