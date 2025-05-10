@@ -137,6 +137,20 @@ export default function AdminDashboardPage() {
             </Link>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Analytics Dashboard</CardTitle>
+            <CardDescription>View detailed analytics and insights</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Analyze assessment data, identify trends, and discover areas where users need the most support.
+            </p>
+            <Link href="/admin/analytics">
+              <Button>View Analytics</Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

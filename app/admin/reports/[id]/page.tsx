@@ -10,12 +10,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { RadarChart } from "@/components/radar-chart"
 import { getAssessmentDetails } from "@/lib/supabase/assessment-service"
+import { sendAssessmentEmail } from "@/app/actions/email-actions"
+import { useToast } from "@/hooks/use-toast"
 
 export default function ReportDetailPage({ params }: { params: { id: string } }) {
+  const { toast } = useToast()
   const [assessment, setAssessment] = useState<any>(null)
   const [scores, setScores] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [sendingEmail, setSendingEmail] = useState(false)
 
   useEffect(() => {
     async function loadAssessment() {
@@ -47,14 +51,34 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
     loadAssessment()
   }, [params.id])
 
-  const handleSendEmail = () => {
-    // In a real app, this would send an email with the report
-    if (assessment?.users?.email) {
-      window.open(
-        `mailto:${assessment.users.email}?subject=Your Financial Assessment Report&body=Here is your financial assessment report.`,
-      )
-    } else {
-      alert("No email address available")
+  const handleSendEmail = async () => {
+    if (!assessment?.id) return
+
+    setSendingEmail(true)
+    try {
+      const result = await sendAssessmentEmail(assessment.id)
+
+      if (result.success) {
+        toast({
+          title: "Email Sent",
+          description: `Assessment results sent to ${assessment.users?.email}`,
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to send email",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error sending email:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
+    } finally {
+      setSendingEmail(false)
     }
   }
 
@@ -119,8 +143,8 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
           <Button variant="outline" onClick={handleDownload}>
             <Download className="mr-2 h-4 w-4" /> Download Report
           </Button>
-          <Button onClick={handleSendEmail}>
-            <Mail className="mr-2 h-4 w-4" /> Email Report
+          <Button onClick={handleSendEmail} disabled={sendingEmail || !assessment.users?.email}>
+            <Mail className="mr-2 h-4 w-4" /> {sendingEmail ? "Sending..." : "Email Report"}
           </Button>
         </div>
       </div>
@@ -142,6 +166,10 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
                 <dd>{assessment.users?.name || "N/A"}</dd>
                 <dt className="text-sm font-medium text-muted-foreground">Email:</dt>
                 <dd>{assessment.users?.email || "N/A"}</dd>
+                <dt className="text-sm font-medium text-muted-foreground">Phone:</dt>
+                <dd>{assessment.users?.phone || "N/A"}</dd>
+                <dt className="text-sm font-medium text-muted-foreground">Marketing Consent:</dt>
+                <dd>{assessment.users?.marketing_consent ? "Yes" : "No"}</dd>
                 <dt className="text-sm font-medium text-muted-foreground">Date:</dt>
                 <dd>{new Date(assessment.completed_at).toLocaleDateString()}</dd>
                 <dt className="text-sm font-medium text-muted-foreground">Overall Score:</dt>

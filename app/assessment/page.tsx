@@ -21,8 +21,20 @@ export default function AssessmentPage() {
   const [answers, setAnswers] = useState<Record<string, { questionId: string; optionId: string; score: number }>>({})
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
+    // Check if user info exists
+    const currentUserId = localStorage.getItem("currentUserId")
+
+    if (!currentUserId) {
+      // Redirect to start page if no user info
+      router.push("/assessment/start")
+      return
+    }
+
+    setUserId(currentUserId)
+
     async function loadQuestions() {
       try {
         const questionsData = await getAllQuestionsWithOptions()
@@ -36,7 +48,7 @@ export default function AssessmentPage() {
     }
 
     loadQuestions()
-  }, [])
+  }, [router])
 
   if (loading) {
     return <div className="container py-12 text-center">Loading assessment questions...</div>
@@ -84,7 +96,6 @@ export default function AssessmentPage() {
     if (isLastQuestionInPillar) {
       if (isLastPillar) {
         // Assessment complete, save to localStorage temporarily
-        // In the next step, we'll save to Supabase
         localStorage.setItem(
           "assessmentAnswers",
           JSON.stringify({
@@ -97,8 +108,8 @@ export default function AssessmentPage() {
           }),
         )
 
-        // Navigate to user info collection before results
-        router.push("/assessment/user-info")
+        // Navigate to results page - we already have user info
+        router.push("/assessment/results")
       } else {
         // Move to next pillar
         setCurrentPillarIndex(currentPillarIndex + 1)

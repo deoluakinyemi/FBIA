@@ -2,64 +2,130 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Download, Share2 } from "lucide-react"
+import { Download, Share2, Mail } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RadarChart } from "@/components/radar-chart"
 import { PillarScoreCard } from "@/components/pillar-score-card"
-import { getAssessmentDetails } from "@/lib/supabase/assessment-service"
+import {
+  createAssessment,
+  savePillarScores,
+  saveAnswers,
+  sendAssessmentResultsEmail,
+} from "@/lib/supabase/assessment-service"
+import { calculateScores, getRecommendations } from "@/lib/scoring"
+import { useToast } from "@/hooks/use-toast"
 
 export default function ResultsPage() {
-  const [assessment, setAssessment] = useState<any>(null)
+  const { toast } = useToast()
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
   const [scores, setScores] = useState<Record<string, number>>({})
   const [recommendations, setRecommendations] = useState<Record<string, string[]>>({})
+  const [overallScore, setOverallScore] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [assessmentId, setAssessmentId] = useState<string | null>(null)
+  const [emailSent, setEmailSent] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
 
   useEffect(() => {
-    async function loadResults() {
+    async function processResults() {
       try {
-        // Get assessment ID from localStorage
-        const assessmentId = localStorage.getItem("currentAssessmentId")
-        if (!assessmentId) {
-          setError("No assessment found. Please complete the assessment first.")
+        // Get user ID from localStorage
+        const currentUserId = localStorage.getItem("currentUserId")
+        const name = localStorage.getItem("userName")
+        const email = localStorage.getItem("userEmail")
+
+        if (!currentUserId) {
+          setError("No user information found. Please restart the assessment.")
           setLoading(false)
           return
         }
 
-        // Get assessment details from Supabase
-        const assessmentDetails = await getAssessmentDetails(assessmentId)
-        if (!assessmentDetails) {
-          setError("Assessment not found. Please complete the assessment again.")
+        setUserId(currentUserId)
+        setUserName(name)
+        setUserEmail(email)
+
+        // Get answers from localStorage
+        const answersJson = localStorage.getItem("assessmentAnswers")
+        if (!answersJson) {
+          setError("No assessment data found. Please retake the assessment.")
           setLoading(false)
           return
         }
 
-        setAssessment(assessmentDetails)
+        const answers = JSON.parse(answersJson) as Record<
+          string,
+          { questionId: string; optionId: string; score: number }
+        >
 
-        // Extract pillar scores
-        const pillarScoresMap: Record<string, number> = {}
-        assessmentDetails.pillarScores.forEach((score: any) => {
-          pillarScoresMap[score.pillars.slug] = score.score
-        })
-        setScores(pillarScoresMap)
+        // Calculate scores
+        const calculatedScores = calculateScores(
+          Object.fromEntries(Object.entries(answers).map(([key, value]) => [key, value.score])),
+        )
 
-        // For now, use hardcoded recommendations
-        // In a real app, these would come from the database
-        setRecommendations(getRecommendations(pillarScoresMap))
+        setScores(calculatedScores)
+
+        // Calculate overall score
+        const overall =
+          Object.values(calculatedScores).reduce((sum, score) => sum + score, 0) / Object.keys(calculatedScores).length
+
+        setOverallScore(overall)
+
+        // Get recommendations
+        setRecommendations(getRecommendations(calculatedScores))
+
+        // Save to Supabase
+        // 1. Create assessment
+        const assessment = await createAssessment(currentUserId, overall)
+        setAssessmentId(assessment.id)
+
+        // 2. Save pillar scores
+        await savePillarScores(assessment.id, calculatedScores)
+
+        // 3. Save individual answers
+        await saveAnswers(
+          assessment.id,
+          Object.fromEntries(
+            Object.entries(answers).map(([key, value]) => [
+              key,
+              { questionId: value.questionId, optionId: value.optionId },
+            ]),
+          ),
+        )
+
+        // 4. Send email notification automatically
+        if (email) {
+          try {
+            setSendingEmail(true)
+            await sendAssessmentResultsEmail(assessment.id)
+            setEmailSent(true)
+            toast({
+              title: "Email Sent",
+              description: "Your assessment results have been sent to your email.",
+            })
+          } catch (emailError) {
+            console.error("Error sending email:", emailError)
+            // Don't show error to user, just log it
+          } finally {
+            setSendingEmail(false)
+          }
+        }
 
         setLoading(false)
       } catch (err) {
-        console.error("Error loading results:", err)
-        setError("An error occurred while loading your results.")
+        console.error("Error processing results:", err)
+        setError("An error occurred while processing your results.")
         setLoading(false)
       }
     }
 
-    loadResults()
-  }, [])
+    processResults()
+  }, [toast])
 
   const handleShare = () => {
     if (navigator.share) {
@@ -82,8 +148,31 @@ export default function ResultsPage() {
     alert("This would download a PDF report in a production environment")
   }
 
+  const handleSendEmail = async () => {
+    if (!assessmentId || !userEmail) return
+
+    try {
+      setSendingEmail(true)
+      await sendAssessmentResultsEmail(assessmentId)
+      setEmailSent(true)
+      toast({
+        title: "Email Sent",
+        description: "Your assessment results have been sent to your email.",
+      })
+    } catch (err) {
+      console.error("Error sending email:", err)
+      toast({
+        title: "Error",
+        description: "Failed to send email. Please try again later.",
+        variant: "destructive",
+      })
+    } finally {
+      setSendingEmail(false)
+    }
+  }
+
   if (loading) {
-    return <div className="container py-12 text-center">Loading your results...</div>
+    return <div className="container py-12 text-center">Processing your results...</div>
   }
 
   if (error) {
@@ -91,31 +180,22 @@ export default function ResultsPage() {
       <div className="container py-12 text-center">
         <h1 className="text-2xl font-bold mb-4">Error</h1>
         <p className="mb-6">{error}</p>
-        <Link href="/assessment">
-          <Button>Take the Assessment</Button>
+        <Link href="/assessment/start">
+          <Button>Restart Assessment</Button>
         </Link>
       </div>
     )
   }
-
-  if (!assessment) {
-    return (
-      <div className="container py-12 text-center">
-        <h1 className="text-2xl font-bold mb-4">No assessment results found</h1>
-        <p className="mb-6">You haven't completed the assessment yet.</p>
-        <Link href="/assessment">
-          <Button>Take the Assessment</Button>
-        </Link>
-      </div>
-    )
-  }
-
-  const overallScore = assessment.overall_score
 
   return (
     <div className="container max-w-4xl py-12">
       <div className="mb-8 space-y-4">
         <h1 className="text-3xl font-bold">Your Financial Health Results</h1>
+        {userName && (
+          <p className="text-xl">
+            Hello, <span className="font-medium">{userName}</span>! Here's your personalized financial assessment.
+          </p>
+        )}
         <p className="text-muted-foreground">
           Based on your responses, we've analyzed your financial health across 8 key pillars.
         </p>
@@ -138,13 +218,23 @@ export default function ResultsPage() {
                   : "Needs improvement. Focus on building your financial foundation."}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-center gap-4">
+        <CardFooter className="flex justify-center gap-4 flex-wrap">
           <Button onClick={handleDownload} variant="outline">
             <Download className="mr-2 h-4 w-4" /> Download Report
           </Button>
-          <Button onClick={handleShare}>
+          <Button onClick={handleShare} variant="outline">
             <Share2 className="mr-2 h-4 w-4" /> Share Results
           </Button>
+          {userEmail && (
+            <Button
+              onClick={handleSendEmail}
+              disabled={sendingEmail || emailSent}
+              variant={emailSent ? "outline" : "default"}
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              {sendingEmail ? "Sending..." : emailSent ? "Email Sent" : "Email Results"}
+            </Button>
+          )}
         </CardFooter>
       </Card>
 
@@ -206,7 +296,12 @@ export default function ResultsPage() {
               ))}
           </div>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex flex-col space-y-4">
+          <p className="text-center text-sm text-muted-foreground">
+            {emailSent ? "We've sent your detailed results to your email. " : ""}
+            We'll be in touch soon to schedule your complimentary clarity session to discuss your results and next
+            steps.
+          </p>
           <Link href="/" className="w-full">
             <Button className="w-full">Return to Home</Button>
           </Link>
@@ -214,156 +309,4 @@ export default function ResultsPage() {
       </Card>
     </div>
   )
-}
-
-// Temporary function to generate recommendations
-// In a real app, these would come from the database
-function getRecommendations(scores: Record<string, number>): Record<string, string[]> {
-  const recommendations: Record<string, string[]> = {}
-
-  // Awareness recommendations
-  if (scores.awareness < 0.6) {
-    recommendations.awareness = [
-      "Set up a system to track all your income and expenses",
-      "Schedule monthly financial review sessions",
-      "Subscribe to financial news sources or podcasts",
-      "Take a basic financial literacy course",
-      "Create a detailed list of all your assets and liabilities",
-    ]
-  } else {
-    recommendations.awareness = [
-      "Deepen your understanding of advanced financial concepts",
-      "Set up more detailed tracking of investment performance",
-      "Analyze economic trends that might affect your specific financial situation",
-      "Consider working with a financial advisor for specialized knowledge",
-    ]
-  }
-
-  // Goals recommendations
-  if (scores.goals < 0.6) {
-    recommendations.goals = [
-      "Define 3-5 specific, measurable financial goals with deadlines",
-      "Break down each goal into smaller, actionable steps",
-      "Create a vision board or written statement about your financial future",
-      "Schedule quarterly reviews of your progress toward goals",
-      "Adjust unrealistic goals to be challenging but achievable",
-    ]
-  } else {
-    recommendations.goals = [
-      "Create more detailed implementation plans for each goal",
-      "Set up automated systems to support your goals",
-      "Add stretch goals to push your financial growth",
-      "Develop contingency plans for potential obstacles",
-    ]
-  }
-
-  // Habits recommendations
-  if (scores.habits < 0.6) {
-    recommendations.habits = [
-      "Set up automatic transfers to savings on payday",
-      "Implement a 24-hour rule before making non-essential purchases",
-      "Track all spending for 30 days to identify patterns",
-      "Schedule 15 minutes weekly for financial management",
-      "Create a system for handling financial windfalls before they occur",
-    ]
-  } else {
-    recommendations.habits = [
-      "Optimize your financial automation systems",
-      "Develop more sophisticated tracking methods",
-      "Create accountability systems for your financial habits",
-      "Share your knowledge by mentoring others",
-    ]
-  }
-
-  // Mindsets recommendations
-  if (scores.mindsets < 0.6) {
-    recommendations.mindsets = [
-      "Read books on financial mindset and psychology of money",
-      "Practice gratitude for your current financial situation while working to improve it",
-      "Challenge negative beliefs about money with evidence",
-      "Find role models who have achieved what you want to achieve",
-      "Journal about your emotional reactions to financial events",
-    ]
-  } else {
-    recommendations.mindsets = [
-      "Mentor others on developing healthy money mindsets",
-      "Explore more advanced wealth psychology concepts",
-      "Challenge yourself to take calculated financial risks",
-      "Develop systems to maintain optimism during market downturns",
-    ]
-  }
-
-  // Assets recommendations
-  if (scores.assets < 0.6) {
-    recommendations.assets = [
-      "Start investing regularly, even with small amounts",
-      "Learn about different asset classes and their characteristics",
-      "Set up automatic investments into index funds or other diversified assets",
-      "Explore ways to generate passive income from your skills or resources",
-      "Create a plan to gradually increase your investment percentage",
-    ]
-  } else {
-    recommendations.assets = [
-      "Optimize your asset allocation for your specific goals",
-      "Explore more sophisticated investment strategies",
-      "Consider alternative investments to further diversify",
-      "Develop systems to increase your passive income streams",
-    ]
-  }
-
-  // Liabilities recommendations
-  if (scores.liabilities < 0.6) {
-    recommendations.liabilities = [
-      "List all debts with interest rates and minimum payments",
-      "Create a debt repayment strategy (snowball or avalanche method)",
-      "Consolidate high-interest debt if possible",
-      "Negotiate with creditors for better terms",
-      "Develop criteria for when to take on new debt",
-    ]
-  } else {
-    recommendations.liabilities = [
-      "Optimize your debt repayment strategy",
-      "Consider leveraging strategic debt for asset acquisition",
-      "Refinance existing debt to better terms",
-      "Develop a more sophisticated approach to using credit",
-    ]
-  }
-
-  // Income recommendations
-  if (scores.income < 0.6) {
-    recommendations.income = [
-      "Identify skills you can develop to increase your primary income",
-      "Explore side hustle opportunities aligned with your skills",
-      "Network strategically in your industry",
-      "Research salary ranges for your position and prepare for negotiation",
-      "Set specific income growth targets for 1, 3, and 5 years",
-    ]
-  } else {
-    recommendations.income = [
-      "Develop more passive income streams",
-      "Consider entrepreneurial opportunities",
-      "Optimize your existing income streams for efficiency",
-      "Explore ways to scale your highest-performing income sources",
-    ]
-  }
-
-  // Expenses recommendations
-  if (scores.expenses < 0.6) {
-    recommendations.expenses = [
-      "Create a detailed budget aligned with your values",
-      "Identify and eliminate unnecessary recurring expenses",
-      "Implement a category-based spending plan",
-      "Practice zero-based budgeting for one month",
-      "Audit your subscriptions and memberships",
-    ]
-  } else {
-    recommendations.expenses = [
-      "Optimize spending to maximize value rather than just cutting costs",
-      "Implement more sophisticated budgeting techniques",
-      "Develop systems to automatically categorize and analyze expenses",
-      "Create spending policies for different areas of your life",
-    ]
-  }
-
-  return recommendations
 }

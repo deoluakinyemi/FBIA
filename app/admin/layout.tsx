@@ -5,7 +5,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
-import { BarChart3, FileQuestion, Home, LogOut, Settings, Users } from "lucide-react"
+import { BarChart3, PieChartIcon as ChartPieIcon, FileQuestion, Home, LogOut, Settings, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
@@ -66,6 +66,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 active={pathname === "/admin/dashboard"}
               >
                 Dashboard
+              </NavItem>
+              <NavItem
+                href="/admin/analytics"
+                icon={<ChartPieIcon className="h-4 w-4" />}
+                active={pathname === "/admin/analytics"}
+              >
+                Analytics
               </NavItem>
               <NavItem
                 href="/admin/questions"

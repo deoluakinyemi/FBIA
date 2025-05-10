@@ -1,6 +1,7 @@
 import { createClient } from "./client"
 import { createServerClient } from "./server"
 import type { Database } from "./database.types"
+import { sendAssessmentResultsEmail as sendEmail, type AssessmentEmailData } from "@/lib/email-service"
 
 export type Pillar = Database["public"]["Tables"]["pillars"]["Row"]
 export type Question = Database["public"]["Tables"]["questions"]["Row"] & {
@@ -82,10 +83,21 @@ export async function getAllQuestionsWithOptions() {
   return result
 }
 
-// Function to create a new user
-export async function createUser(email: string, name: string) {
+// Update the createUser function to include phone and marketing consent
+export async function createUser(email: string, name: string, phone?: string, marketingConsent?: boolean) {
   const supabase = createClient()
-  const { data, error } = await supabase.from("users").insert([{ email, name }]).select().single()
+  const { data, error } = await supabase
+    .from("users")
+    .insert([
+      {
+        email,
+        name,
+        phone: phone || null,
+        marketing_consent: marketingConsent || false,
+      },
+    ])
+    .select()
+    .single()
 
   if (error) {
     console.error("Error creating user:", error)
@@ -189,6 +201,69 @@ export async function getRecommendationsForScore(pillarId: string, score: number
   }
 
   return data
+}
+
+// New function to send assessment results email
+export async function sendAssessmentResultsEmail(assessmentId: string) {
+  try {
+    const supabase = createServerClient()
+
+    // Get the assessment with user info and pillar scores
+    const { data: assessment, error: assessmentError } = await supabase
+      .from("assessments")
+      .select(`
+        *,
+        users (*)
+      `)
+      .eq("id", assessmentId)
+      .single()
+
+    if (assessmentError) {
+      console.error("Error fetching assessment:", assessmentError)
+      throw assessmentError
+    }
+
+    // Get pillar scores
+    const { data: pillarScores, error: pillarScoresError } = await supabase
+      .from("pillar_scores")
+      .select(`
+        *,
+        pillars (*)
+      `)
+      .eq("assessment_id", assessmentId)
+
+    if (pillarScoresError) {
+      console.error("Error fetching pillar scores:", pillarScoresError)
+      throw pillarScoresError
+    }
+
+    // Process pillar scores into a format for the email
+    const pillarScoreMap: Record<string, number> = {}
+    pillarScores.forEach((score) => {
+      const pillarSlug = score.pillars?.slug || ""
+      pillarScoreMap[pillarSlug] = score.score
+    })
+
+    // Prepare email data
+    const emailData: AssessmentEmailData = {
+      userName: assessment.users?.name || "User",
+      userEmail: assessment.users?.email || "",
+      overallScore: assessment.overall_score || 0,
+      pillarScores: pillarScoreMap,
+      assessmentId: assessment.id,
+      completedAt: assessment.completed_at,
+    }
+
+    // Send the email
+    if (emailData.userEmail) {
+      return await sendEmail(emailData)
+    } else {
+      throw new Error("User email not found")
+    }
+  } catch (error) {
+    console.error("Error sending assessment results email:", error)
+    throw error
+  }
 }
 
 // Admin functions

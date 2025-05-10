@@ -42,14 +42,14 @@ export default function Home() {
             </p>
           </div>
           <div className="flex flex-col space-y-2">
-            <h3 className="font-medium">Shareable Results</h3>
+            <h3 className="font-medium">Clarity Session</h3>
             <p className="text-sm text-muted-foreground">
-              Share your results with financial advisors or keep them private for your own reference.
+              Get a complimentary follow-up session to discuss your results and next steps.
             </p>
           </div>
         </CardContent>
         <CardFooter>
-          <Link href="/assessment" className="w-full">
+          <Link href="/assessment/start" className="w-full">
             <Button size="lg" className="w-full">
               Start Assessment
               <ArrowRight className="ml-2 h-4 w-4" />
