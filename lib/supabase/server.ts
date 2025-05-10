@@ -1,8 +1,13 @@
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
-import type { Database } from "@/lib/supabase/database.types"
+import { createClient } from "@supabase/supabase-js"
+import type { Database } from "./database.types"
 
-// Create a Supabase client for server components
-export const createServerClient = () => {
-  return createServerComponentClient<Database>({ cookies })
+export function createServerClient() {
+  const supabaseUrl = process.env.SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Missing Supabase environment variables")
+  }
+
+  return createClient<Database>(supabaseUrl, supabaseKey)
 }

@@ -1,40 +1,38 @@
 import { Resend } from "resend"
 import { AssessmentResultsEmail } from "@/components/emails/assessment-results-email"
-import { renderAsync } from "@react-email/components"
 
-// Initialize Resend with API key
+// Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-export type AssessmentEmailData = {
-  userName: string
-  userEmail: string
-  overallScore: number
-  pillarScores: Record<string, number>
-  assessmentId: string
-  completedAt: string
-}
-
-export async function sendAssessmentResultsEmail(data: AssessmentEmailData) {
+// Function to send assessment results email
+export async function sendAssessmentResultsEmail(
+  userEmail: string,
+  userName: string,
+  assessmentId: string,
+  overallScore: number,
+) {
   try {
-    // Render the React email template to HTML
-    const html = await renderAsync(AssessmentResultsEmail(data))
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
-    // Send the email
-    const { data: emailData, error } = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: "Financial Assessment <assessment@yourdomain.com>",
-      to: data.userEmail,
-      subject: "Your Financial Assessment Results",
-      html: html,
+      to: userEmail,
+      subject: "Your Financial Health Assessment Results",
+      react: AssessmentResultsEmail({
+        userName,
+        overallScore,
+        assessmentUrl: `${appUrl}/assessment/results?id=${assessmentId}`,
+      }),
     })
 
     if (error) {
       console.error("Error sending email:", error)
-      throw new Error(`Failed to send email: ${error.message}`)
+      throw new Error(error.message)
     }
 
-    return { success: true, messageId: emailData?.id }
+    return { success: true, data }
   } catch (error) {
-    console.error("Error in sendAssessmentResultsEmail:", error)
+    console.error("Failed to send email:", error)
     throw error
   }
 }

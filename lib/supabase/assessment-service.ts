@@ -1,7 +1,7 @@
-import { createClient } from "./client"
+import { createClientClient } from "./client"
 import { createServerClient } from "./server"
 import type { Database } from "./database.types"
-import { sendAssessmentResultsEmail as sendEmail, type AssessmentEmailData } from "@/lib/email-service"
+import { sendAssessmentResultsEmail as sendEmail } from "@/lib/email-service"
 
 export type Pillar = Database["public"]["Tables"]["pillars"]["Row"]
 export type Question = Database["public"]["Tables"]["questions"]["Row"] & {
@@ -14,7 +14,7 @@ export type User = Database["public"]["Tables"]["users"]["Row"]
 
 // Function to get all pillars
 export async function getPillars() {
-  const supabase = createClient()
+  const supabase = createClientClient()
   const { data, error } = await supabase.from("pillars").select("*").order("display_order", { ascending: true })
 
   if (error) {
@@ -27,7 +27,7 @@ export async function getPillars() {
 
 // Function to get questions for a specific pillar
 export async function getQuestionsForPillar(pillarId: string) {
-  const supabase = createClient()
+  const supabase = createClientClient()
   const { data: questions, error: questionsError } = await supabase
     .from("questions")
     .select("*")
@@ -62,7 +62,7 @@ export async function getQuestionsForPillar(pillarId: string) {
 
 // Function to get all questions with their options
 export async function getAllQuestionsWithOptions() {
-  const supabase = createClient()
+  const supabase = createClientClient()
   const { data: pillars, error: pillarsError } = await supabase
     .from("pillars")
     .select("*")
@@ -85,7 +85,7 @@ export async function getAllQuestionsWithOptions() {
 
 // Update the createUser function to include phone and marketing consent
 export async function createUser(email: string, name: string, phone?: string, marketingConsent?: boolean) {
-  const supabase = createClient()
+  const supabase = createClientClient()
   const { data, error } = await supabase
     .from("users")
     .insert([
@@ -109,10 +109,15 @@ export async function createUser(email: string, name: string, phone?: string, ma
 
 // Function to create a new assessment
 export async function createAssessment(userId: string, overallScore: number) {
-  const supabase = createClient()
+  const supabase = createServerClient()
+
   const { data, error } = await supabase
     .from("assessments")
-    .insert([{ user_id: userId, overall_score: overallScore }])
+    .insert({
+      user_id: userId,
+      overall_score: overallScore,
+      completed_at: new Date().toISOString(),
+    })
     .select()
     .single()
 
@@ -126,9 +131,9 @@ export async function createAssessment(userId: string, overallScore: number) {
 
 // Function to save pillar scores
 export async function savePillarScores(assessmentId: string, scores: Record<string, number>) {
-  const supabase = createClient()
+  const supabase = createServerClient()
 
-  // First, get all pillars to map slug to ID
+  // Get all pillars
   const { data: pillars, error: pillarsError } = await supabase.from("pillars").select("id, slug")
 
   if (pillarsError) {
@@ -136,29 +141,28 @@ export async function savePillarScores(assessmentId: string, scores: Record<stri
     throw pillarsError
   }
 
-  const pillarMap = pillars.reduce(
-    (acc, pillar) => {
-      acc[pillar.slug] = pillar.id
-      return acc
-    },
-    {} as Record<string, string>,
-  )
+  // Create pillar score records
+  const pillarScores = Object.entries(scores)
+    .map(([pillarSlug, score]) => {
+      const pillar = pillars?.find((p) => p.slug === pillarSlug)
+      if (!pillar) return null
 
-  // Prepare pillar scores for insertion
-  const pillarScores = Object.entries(scores).map(([slug, score]) => ({
-    assessment_id: assessmentId,
-    pillar_id: pillarMap[slug],
-    score,
-  }))
+      return {
+        assessment_id: assessmentId,
+        pillar_id: pillar.id,
+        score,
+      }
+    })
+    .filter(Boolean)
 
-  const { data, error } = await supabase.from("pillar_scores").insert(pillarScores)
+  const { error } = await supabase.from("pillar_scores").insert(pillarScores)
 
   if (error) {
     console.error("Error saving pillar scores:", error)
     throw error
   }
 
-  return data
+  return { success: true }
 }
 
 // Function to save individual answers
@@ -166,28 +170,27 @@ export async function saveAnswers(
   assessmentId: string,
   answers: Record<string, { questionId: string; optionId: string }>,
 ) {
-  const supabase = createClient()
+  const supabase = createServerClient()
 
-  // Prepare answers for insertion
-  const answerRecords = Object.values(answers).map(({ questionId, optionId }) => ({
+  const answerRecords = Object.entries(answers).map(([, value]) => ({
     assessment_id: assessmentId,
-    question_id: questionId,
-    option_id: optionId,
+    question_id: value.questionId,
+    option_id: value.optionId,
   }))
 
-  const { data, error } = await supabase.from("answers").insert(answerRecords)
+  const { error } = await supabase.from("answers").insert(answerRecords)
 
   if (error) {
     console.error("Error saving answers:", error)
     throw error
   }
 
-  return data
+  return { success: true }
 }
 
 // Function to get recommendations for a score
 export async function getRecommendationsForScore(pillarId: string, score: number) {
-  const supabase = createClient()
+  const supabase = createClientClient()
   const { data, error } = await supabase
     .from("recommendations")
     .select("*")
@@ -201,69 +204,6 @@ export async function getRecommendationsForScore(pillarId: string, score: number
   }
 
   return data
-}
-
-// New function to send assessment results email
-export async function sendAssessmentResultsEmail(assessmentId: string) {
-  try {
-    const supabase = createServerClient()
-
-    // Get the assessment with user info and pillar scores
-    const { data: assessment, error: assessmentError } = await supabase
-      .from("assessments")
-      .select(`
-        *,
-        users (*)
-      `)
-      .eq("id", assessmentId)
-      .single()
-
-    if (assessmentError) {
-      console.error("Error fetching assessment:", assessmentError)
-      throw assessmentError
-    }
-
-    // Get pillar scores
-    const { data: pillarScores, error: pillarScoresError } = await supabase
-      .from("pillar_scores")
-      .select(`
-        *,
-        pillars (*)
-      `)
-      .eq("assessment_id", assessmentId)
-
-    if (pillarScoresError) {
-      console.error("Error fetching pillar scores:", pillarScoresError)
-      throw pillarScoresError
-    }
-
-    // Process pillar scores into a format for the email
-    const pillarScoreMap: Record<string, number> = {}
-    pillarScores.forEach((score) => {
-      const pillarSlug = score.pillars?.slug || ""
-      pillarScoreMap[pillarSlug] = score.score
-    })
-
-    // Prepare email data
-    const emailData: AssessmentEmailData = {
-      userName: assessment.users?.name || "User",
-      userEmail: assessment.users?.email || "",
-      overallScore: assessment.overall_score || 0,
-      pillarScores: pillarScoreMap,
-      assessmentId: assessment.id,
-      completedAt: assessment.completed_at,
-    }
-
-    // Send the email
-    if (emailData.userEmail) {
-      return await sendEmail(emailData)
-    } else {
-      throw new Error("User email not found")
-    }
-  } catch (error) {
-    console.error("Error sending assessment results email:", error)
-    throw error
-  }
 }
 
 // Admin functions
@@ -291,49 +231,68 @@ export async function getAllAssessments() {
 export async function getAssessmentDetails(assessmentId: string) {
   const supabase = createServerClient()
 
-  // Get the assessment with user info
-  const { data: assessment, error: assessmentError } = await supabase
+  const { data, error } = await supabase
     .from("assessments")
     .select(`
       *,
-      users (*)
+      users (
+        id,
+        name,
+        email,
+        phone,
+        marketing_consent
+      ),
+      pillarScores: pillar_scores (
+        id,
+        pillar_id,
+        score,
+        pillars (
+          id,
+          name,
+          slug
+        )
+      ),
+      answers (
+        id,
+        question_id,
+        option_id,
+        questions (
+          id,
+          question,
+          pillar_id
+        ),
+        options (
+          id,
+          option_text,
+          score
+        )
+      )
     `)
     .eq("id", assessmentId)
     .single()
 
-  if (assessmentError) {
-    console.error("Error fetching assessment:", assessmentError)
-    return null
+  if (error) {
+    console.error("Error fetching assessment details:", error)
+    throw error
   }
 
-  // Get pillar scores
-  const { data: pillarScores, error: pillarScoresError } = await supabase
-    .from("pillar_scores")
-    .select(`
-      *,
-      pillars (*)
-    `)
-    .eq("assessment_id", assessmentId)
+  return data
+}
 
-  if (pillarScoresError) {
-    console.error("Error fetching pillar scores:", pillarScoresError)
-    return { ...assessment, pillarScores: [] }
+// Function to send assessment results email
+export async function sendAssessmentResultsEmail(assessmentId: string) {
+  try {
+    const assessment = await getAssessmentDetails(assessmentId)
+
+    if (!assessment || !assessment.users?.email) {
+      throw new Error("Assessment or user email not found")
+    }
+
+    await sendEmail(assessment.users.email, assessment.users.name || "User", assessmentId, assessment.overall_score)
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error sending assessment results email:", error)
+    throw error
   }
-
-  // Get answers with question and option details
-  const { data: answers, error: answersError } = await supabase
-    .from("answers")
-    .select(`
-      *,
-      questions (*),
-      options (*)
-    `)
-    .eq("assessment_id", assessmentId)
-
-  if (answersError) {
-    console.error("Error fetching answers:", answersError)
-    return { ...assessment, pillarScores, answers: [] }
-  }
-
-  return { ...assessment, pillarScores, answers }
 }
