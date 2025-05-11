@@ -1,18 +1,11 @@
-"use client"
+import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
-import { ArrowRight, CheckCircle } from "lucide-react"
+import { ArrowRight, CheckCircle2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function AssessmentStartPage() {
-  const router = useRouter()
-
-  const startAssessment = () => {
-    router.push("/assessment/register")
-  }
-
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-4xl mx-auto">
@@ -22,9 +15,11 @@ export default function AssessmentStartPage() {
             Discover where you stand in your financial journey and get personalized recommendations
           </p>
           <div className="flex justify-center">
-            <Button onClick={startAssessment} size="lg" className="bg-red-600 hover:bg-red-700 text-white">
-              Start Your Assessment <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            <Link href="/assessment/user-info">
+              <Button size="lg" className="bg-red-600 hover:bg-red-700 text-white">
+                Start Your Assessment <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -40,7 +35,7 @@ export default function AssessmentStartPage() {
                 "Track your progress over time with follow-up assessments",
               ].map((item, index) => (
                 <li key={index} className="flex items-start">
-                  <CheckCircle className="h-5 w-5 text-nairawise-medium mr-2 mt-0.5 flex-shrink-0" />
+                  <CheckCircle2 className="h-5 w-5 text-nairawise-medium mr-2 mt-0.5 flex-shrink-0" />
                   <span className="text-nairawise-dark/80">{item}</span>
                 </li>
               ))}
@@ -64,42 +59,42 @@ export default function AssessmentStartPage() {
               {
                 name: "Financial Awareness",
                 description: "Understanding your current financial situation",
-                icon: "/images/financial-awareness-icon.png",
+                icon: "/icons/financial-awareness.png",
               },
               {
                 name: "Goal Setting",
                 description: "Creating clear financial objectives",
-                icon: "/images/goal-setting-icon.png",
+                icon: "/icons/goal-setting.png",
               },
               {
                 name: "Financial Habits",
                 description: "Developing positive money routines",
-                icon: "/images/financial-habits-icon.png",
+                icon: "/icons/financial-habits.png",
               },
               {
                 name: "Money Mindsets",
                 description: "Cultivating healthy attitudes about money",
-                icon: "/images/money-mindsets-icon.png",
+                icon: "/icons/money-mindsets.png",
               },
               {
                 name: "Asset Building",
                 description: "Growing your wealth through investments",
-                icon: "/images/asset-building-icon.png",
+                icon: "/icons/asset-building.png",
               },
               {
                 name: "Liability Management",
                 description: "Handling debt and financial obligations",
-                icon: "/images/liability-management-icon.png",
+                icon: "/icons/liability-management.png",
               },
               {
                 name: "Income Streams",
                 description: "Developing multiple sources of income",
-                icon: "/images/income-streams-icon.png",
+                icon: "/icons/income-streams.png",
               },
               {
                 name: "Expense Control",
                 description: "Managing spending and budgeting effectively",
-                icon: "/images/expense-control-icon.png",
+                icon: "/icons/expense-control.png",
               },
             ].map((pillar, index) => (
               <Card key={index} className="overflow-hidden hover:shadow-md transition-shadow">
@@ -122,9 +117,11 @@ export default function AssessmentStartPage() {
         </div>
 
         <div className="text-center">
-          <Button onClick={startAssessment} size="lg" className="bg-red-600 hover:bg-red-700 text-white">
-            Start Your Assessment <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+          <Link href="/assessment/user-info">
+            <Button size="lg" className="bg-red-600 hover:bg-red-700 text-white">
+              Start Your Assessment <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
           <p className="mt-4 text-sm text-nairawise-dark/60">
             The assessment takes approximately 10-15 minutes to complete.
           </p>

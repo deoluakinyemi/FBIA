@@ -10,75 +10,64 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createUser, createAssessment, savePillarScores, saveAnswers } from "@/lib/supabase/assessment-service"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export default function UserInfoPage() {
   const router = useRouter()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
+  const [marketingConsent, setMarketingConsent] = useState(false)
+  const [errors, setErrors] = useState<{ name?: string; email?: string }>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+
+  const validateForm = () => {
+    const newErrors: { name?: string; email?: string } = {}
+
+    if (!name.trim()) {
+      newErrors.name = "Name is required"
+    }
+
+    if (!email.trim()) {
+      newErrors.email = "Email is required"
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Email is invalid"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!validateForm()) {
+      return
+    }
+
     setIsSubmitting(true)
-    setError(null)
 
     try {
-      // Get answers from localStorage
-      const answersJson = localStorage.getItem("assessmentAnswers")
-      if (!answersJson) {
-        throw new Error("No assessment data found. Please retake the assessment.")
+      // Generate a temporary user ID
+      const userId = `user_${Date.now()}`
+
+      // Store user info in localStorage
+      const userInfo = {
+        id: userId,
+        name,
+        email,
+        phone,
+        marketingConsent,
+        createdAt: new Date().toISOString(),
       }
 
-      const answers = JSON.parse(answersJson) as Record<string, { questionId: string; optionId: string; score: number }>
+      localStorage.setItem("userInfo", JSON.stringify(userInfo))
+      localStorage.setItem("currentUserId", userId)
 
-      // Calculate scores for each pillar
-      const pillarScores: Record<string, number> = {}
-      const pillarCounts: Record<string, number> = {}
-
-      Object.entries(answers).forEach(([key, answer]) => {
-        const [pillar] = key.split("-")
-
-        if (!pillarScores[pillar]) {
-          pillarScores[pillar] = 0
-          pillarCounts[pillar] = 0
-        }
-
-        pillarScores[pillar] += answer.score
-        pillarCounts[pillar]++
-      })
-
-      // Calculate average score for each pillar (normalized to 0-1)
-      Object.keys(pillarScores).forEach((pillar) => {
-        pillarScores[pillar] = pillarScores[pillar] / (pillarCounts[pillar] * 4) // Divide by max score per question (4)
-      })
-
-      // Calculate overall score
-      const overallScore =
-        Object.values(pillarScores).reduce((sum, score) => sum + score, 0) / Object.keys(pillarScores).length
-
-      // Save to Supabase
-      // 1. Create user
-      const user = await createUser(email, name)
-
-      // 2. Create assessment
-      const assessment = await createAssessment(user.id, overallScore)
-
-      // 3. Save pillar scores
-      await savePillarScores(assessment.id, pillarScores)
-
-      // 4. Save individual answers
-      await saveAnswers(assessment.id, answers)
-
-      // Store assessment ID for results page
-      localStorage.setItem("currentAssessmentId", assessment.id)
-
-      // Navigate to results
-      router.push("/assessment/results")
-    } catch (err) {
-      console.error("Error submitting assessment:", err)
-      setError(err instanceof Error ? err.message : "An error occurred while submitting your assessment.")
+      // Navigate to assessment
+      router.push("/assessment")
+    } catch (error) {
+      console.error("Error saving user info:", error)
     } finally {
       setIsSubmitting(false)
     }
@@ -88,42 +77,67 @@ export default function UserInfoPage() {
     <div className="container max-w-md py-12">
       <Card>
         <CardHeader>
-          <CardTitle>Almost Done!</CardTitle>
-          <CardDescription>
-            Please provide your information to receive your personalized financial assessment results.
-          </CardDescription>
+          <CardTitle className="text-2xl text-nairawise-dark">Your Information</CardTitle>
+          <CardDescription>Please provide your details before starting the assessment.</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Your Name</Label>
+              <Label htmlFor="name" className="text-nairawise-dark">
+                Full Name <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your name"
-                required
+                placeholder="Enter your full name"
+                className={errors.name ? "border-red-500" : ""}
               />
+              {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email" className="text-nairawise-dark">
+                Email Address <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                required
+                placeholder="Enter your email address"
+                className={errors.email ? "border-red-500" : ""}
               />
-              <p className="text-xs text-muted-foreground">
-                We'll use this to send you your results and follow-up recommendations.
-              </p>
+              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-nairawise-dark">
+                Phone Number (Optional)
+              </Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Enter your phone number"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="marketing"
+                checked={marketingConsent}
+                onCheckedChange={(checked) => setMarketingConsent(checked as boolean)}
+              />
+              <Label htmlFor="marketing" className="text-sm text-nairawise-dark/80">
+                I agree to receive financial tips and updates via email
+              </Label>
+            </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Submitting..." : "Get My Results"}{" "}
+            <Button type="submit" disabled={isSubmitting} className="w-full bg-red-600 hover:bg-red-700 text-white">
+              {isSubmitting ? "Processing..." : "Continue to Assessment"}
               {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
             </Button>
           </CardFooter>

@@ -9,8 +9,19 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Progress } from "@/components/ui/progress"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { getAllQuestionsWithOptions } from "@/lib/supabase/assessment-service"
-import type { Question } from "@/lib/supabase/assessment-service"
+
+// Define types locally to avoid import issues
+interface Option {
+  id: string
+  option_text: string
+  score: number
+}
+
+interface Question {
+  id: string
+  question: string
+  options: Option[]
+}
 
 export default function AssessmentPage() {
   const router = useRouter()
@@ -24,36 +35,71 @@ export default function AssessmentPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Check if user info exists in session storage
-    const userInfo = sessionStorage.getItem("userInfo")
+    // Check if user info exists
+    const userInfo = localStorage.getItem("userInfo")
 
     if (!userInfo) {
-      // Redirect to registration page if no user info
-      router.push("/assessment/register")
+      // Redirect to user info page if no user info
+      router.push("/assessment/user-info")
       return
     }
 
-    async function loadQuestions() {
-      try {
-        setLoading(true)
-        const questionsData = await getAllQuestionsWithOptions()
-
-        if (Object.keys(questionsData).length === 0) {
-          setError("No questions found. Please try again later.")
-          return
-        }
-
-        setQuestions(questionsData)
-        setPillars(Object.keys(questionsData))
-      } catch (err) {
-        console.error("Error loading questions:", err)
-        setError("Failed to load assessment questions. Please try again later.")
-      } finally {
-        setLoading(false)
-      }
+    // Mock data for testing - replace with actual API call in production
+    const mockQuestions: Record<string, Question[]> = {
+      awareness: [
+        {
+          id: "q1",
+          question: "How would you rate your understanding of your current financial situation?",
+          options: [
+            { id: "q1a1", option_text: "Very poor - I have no idea about my finances", score: 0.1 },
+            { id: "q1a2", option_text: "Poor - I have a vague idea but many gaps", score: 0.3 },
+            { id: "q1a3", option_text: "Average - I understand the basics of my finances", score: 0.5 },
+            { id: "q1a4", option_text: "Good - I have a solid understanding of my finances", score: 0.7 },
+            { id: "q1a5", option_text: "Excellent - I have complete knowledge of my finances", score: 0.9 },
+          ],
+        },
+        {
+          id: "q2",
+          question: "How often do you review your financial statements?",
+          options: [
+            { id: "q2a1", option_text: "Never", score: 0.1 },
+            { id: "q2a2", option_text: "Rarely (once a year or less)", score: 0.3 },
+            { id: "q2a3", option_text: "Sometimes (every few months)", score: 0.5 },
+            { id: "q2a4", option_text: "Often (monthly)", score: 0.7 },
+            { id: "q2a5", option_text: "Very frequently (weekly or more)", score: 0.9 },
+          ],
+        },
+      ],
+      goals: [
+        {
+          id: "q3",
+          question: "Do you have clearly defined financial goals?",
+          options: [
+            { id: "q3a1", option_text: "No goals at all", score: 0.1 },
+            { id: "q3a2", option_text: "Vague ideas but nothing specific", score: 0.3 },
+            { id: "q3a3", option_text: "Some goals but not well-defined", score: 0.5 },
+            { id: "q3a4", option_text: "Several clear goals", score: 0.7 },
+            { id: "q3a5", option_text: "Comprehensive, specific goals with timelines", score: 0.9 },
+          ],
+        },
+        {
+          id: "q4",
+          question: "How often do you review and adjust your financial goals?",
+          options: [
+            { id: "q4a1", option_text: "Never", score: 0.1 },
+            { id: "q4a2", option_text: "Rarely (once a year or less)", score: 0.3 },
+            { id: "q4a3", option_text: "Sometimes (every few months)", score: 0.5 },
+            { id: "q4a4", option_text: "Often (monthly)", score: 0.7 },
+            { id: "q4a5", option_text: "Very frequently (weekly or more)", score: 0.9 },
+          ],
+        },
+      ],
     }
 
-    loadQuestions()
+    // Set mock data for testing
+    setQuestions(mockQuestions)
+    setPillars(Object.keys(mockQuestions))
+    setLoading(false)
   }, [router])
 
   // Check if we have a current question
@@ -70,7 +116,7 @@ export default function AssessmentPage() {
   const isLastPillar = currentPillarIndex === pillars.length - 1
 
   const handleNext = () => {
-    if (!selectedOption) return
+    if (!selectedOption || !currentQuestion) return
 
     // Save the answer
     const questionId = currentQuestion.id
@@ -91,8 +137,8 @@ export default function AssessmentPage() {
     // Move to next question or pillar
     if (isLastQuestionInPillar) {
       if (isLastPillar) {
-        // Assessment complete, save to sessionStorage temporarily
-        sessionStorage.setItem(
+        // Assessment complete, save to localStorage temporarily
+        localStorage.setItem(
           "assessmentAnswers",
           JSON.stringify({
             ...answers,
