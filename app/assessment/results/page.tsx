@@ -35,23 +35,21 @@ export default function ResultsPage() {
   useEffect(() => {
     async function processResults() {
       try {
-        // Get user ID from localStorage
-        const currentUserId = localStorage.getItem("currentUserId")
-        const name = localStorage.getItem("userName")
-        const email = localStorage.getItem("userEmail")
-
-        if (!currentUserId) {
+        // Get user info from session storage
+        const userInfoJson = sessionStorage.getItem("userInfo")
+        if (!userInfoJson) {
           setError("No user information found. Please restart the assessment.")
           setLoading(false)
           return
         }
 
-        setUserId(currentUserId)
-        setUserName(name)
-        setUserEmail(email)
+        const userInfo = JSON.parse(userInfoJson)
+        setUserId(userInfo.id)
+        setUserName(userInfo.name)
+        setUserEmail(userInfo.email)
 
-        // Get answers from localStorage
-        const answersJson = localStorage.getItem("assessmentAnswers")
+        // Get answers from session storage
+        const answersJson = sessionStorage.getItem("assessmentAnswers")
         if (!answersJson) {
           setError("No assessment data found. Please retake the assessment.")
           setLoading(false)
@@ -80,40 +78,45 @@ export default function ResultsPage() {
         setRecommendations(getRecommendations(calculatedScores))
 
         // Save to Supabase
-        // 1. Create assessment
-        const assessment = await createAssessment(currentUserId, overall)
-        setAssessmentId(assessment.id)
+        try {
+          // 1. Create assessment
+          const assessment = await createAssessment(userInfo.id, overall)
+          setAssessmentId(assessment.id)
 
-        // 2. Save pillar scores
-        await savePillarScores(assessment.id, calculatedScores)
+          // 2. Save pillar scores
+          await savePillarScores(assessment.id, calculatedScores)
 
-        // 3. Save individual answers
-        await saveAnswers(
-          assessment.id,
-          Object.fromEntries(
-            Object.entries(answers).map(([key, value]) => [
-              key,
-              { questionId: value.questionId, optionId: value.optionId },
-            ]),
-          ),
-        )
+          // 3. Save individual answers
+          await saveAnswers(
+            assessment.id,
+            Object.fromEntries(
+              Object.entries(answers).map(([key, value]) => [
+                key,
+                { questionId: value.questionId, optionId: value.optionId },
+              ]),
+            ),
+          )
 
-        // 4. Send email notification automatically
-        if (email) {
-          try {
-            setSendingEmail(true)
-            await sendAssessmentResultsEmail(assessment.id)
-            setEmailSent(true)
-            toast({
-              title: "Email Sent",
-              description: "Your assessment results have been sent to your email.",
-            })
-          } catch (emailError) {
-            console.error("Error sending email:", emailError)
-            // Don't show error to user, just log it
-          } finally {
-            setSendingEmail(false)
+          // 4. Send email notification automatically
+          if (userInfo.email) {
+            try {
+              setSendingEmail(true)
+              await sendAssessmentResultsEmail(assessment.id)
+              setEmailSent(true)
+              toast({
+                title: "Email Sent",
+                description: "Your assessment results have been sent to your email.",
+              })
+            } catch (emailError) {
+              console.error("Error sending email:", emailError)
+              // Don't show error to user, just log it
+            } finally {
+              setSendingEmail(false)
+            }
           }
+        } catch (saveError) {
+          console.error("Error saving assessment:", saveError)
+          // Continue showing results even if saving fails
         }
 
         setLoading(false)
@@ -160,7 +163,7 @@ export default function ResultsPage() {
         <h1 className="text-2xl font-bold mb-4 text-nairawise-dark">Error</h1>
         <p className="mb-6 text-nairawise-dark/80">{error}</p>
         <Link href="/assessment/start">
-          <Button className="bg-nairawise-dark hover:bg-nairawise-dark/90 text-white">Restart Assessment</Button>
+          <Button className="bg-red-600 hover:bg-red-700 text-white">Restart Assessment</Button>
         </Link>
       </div>
     )
@@ -206,9 +209,7 @@ export default function ResultsPage() {
               disabled={sendingEmail || emailSent}
               variant={emailSent ? "outline" : "default"}
               className={
-                emailSent
-                  ? "border-nairawise-dark text-nairawise-dark"
-                  : "bg-nairawise-dark hover:bg-nairawise-dark/90 text-white"
+                emailSent ? "border-nairawise-dark text-nairawise-dark" : "bg-red-600 hover:bg-red-700 text-white"
               }
             >
               <Mail className="mr-2 h-4 w-4" />
@@ -298,7 +299,7 @@ export default function ResultsPage() {
             steps.
           </p>
           <Link href="/" className="w-full">
-            <Button className="w-full bg-nairawise-dark hover:bg-nairawise-dark/90 text-white">Return to Home</Button>
+            <Button className="w-full bg-red-600 hover:bg-red-700 text-white">Return to Home</Button>
           </Link>
         </CardFooter>
       </Card>

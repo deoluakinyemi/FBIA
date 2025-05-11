@@ -1,187 +1,133 @@
-import Link from "next/link"
+"use client"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { ArrowRight, CheckCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 
 export default function AssessmentStartPage() {
+  const router = useRouter()
+
+  const startAssessment = () => {
+    router.push("/assessment/register")
+  }
+
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">Financial Health Assessment</h1>
-          <p className="text-lg text-gray-600 mb-8">
-            Discover your financial strengths and areas for improvement with our comprehensive assessment
+          <h1 className="text-3xl md:text-4xl font-bold mb-4 text-nairawise-dark">Financial Health Assessment</h1>
+          <p className="text-xl text-nairawise-dark/80 mb-6">
+            Discover where you stand in your financial journey and get personalized recommendations
           </p>
           <div className="flex justify-center">
-            <Link href="/assessment/user-info">
-              <Button className="bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-lg flex items-center gap-2">
-                Start Your Assessment <ArrowRight className="ml-2" />
-              </Button>
-            </Link>
+            <Button onClick={startAssessment} size="lg" className="bg-red-600 hover:bg-red-700 text-white">
+              Start Your Assessment <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-12">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <div>
-              <h2 className="text-2xl font-bold mb-4">What You'll Discover</h2>
-              <ul className="space-y-3">
-                <li className="flex items-start">
-                  <CheckCircle className="h-5 w-5 text-nairawise-medium mr-2 mt-0.5" />
-                  <span>Your overall financial health score</span>
+        <div className="grid md:grid-cols-2 gap-8 mb-12">
+          <div>
+            <h2 className="text-2xl font-bold mb-4 text-nairawise-dark">Why Take This Assessment?</h2>
+            <ul className="space-y-3">
+              {[
+                "Gain clarity on your current financial situation",
+                "Identify your financial strengths and weaknesses",
+                "Receive personalized recommendations for improvement",
+                "Create a roadmap for achieving financial freedom",
+                "Track your progress over time with follow-up assessments",
+              ].map((item, index) => (
+                <li key={index} className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-nairawise-medium mr-2 mt-0.5 flex-shrink-0" />
+                  <span className="text-nairawise-dark/80">{item}</span>
                 </li>
-                <li className="flex items-start">
-                  <CheckCircle className="h-5 w-5 text-nairawise-medium mr-2 mt-0.5" />
-                  <span>Detailed breakdown across 8 financial pillars</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="h-5 w-5 text-nairawise-medium mr-2 mt-0.5" />
-                  <span>Personalized recommendations for improvement</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="h-5 w-5 text-nairawise-medium mr-2 mt-0.5" />
-                  <span>Actionable steps to enhance your financial wellbeing</span>
-                </li>
-              </ul>
-            </div>
-            <div className="hidden md:block">
-              <Image
-                src="/images/financial-advisor-meeting.png"
-                alt="Financial Assessment"
-                width={500}
-                height={300}
-                className="rounded-lg"
-              />
-            </div>
+              ))}
+            </ul>
+          </div>
+          <div className="flex justify-center items-center">
+            <Image
+              src="/images/financial-advisor-meeting.png"
+              alt="Financial Assessment"
+              width={400}
+              height={300}
+              className="rounded-lg shadow-lg"
+            />
           </div>
         </div>
 
         <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6 text-center">The 8 Financial Pillars</h2>
-          <p className="text-center mb-8 text-gray-600">
-            Our assessment evaluates your financial health across these critical areas
-          </p>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
-              <div className="flex flex-col items-center text-center">
-                <Image
-                  src="/images/financial-awareness-icon.png"
-                  alt="Financial Awareness"
-                  width={64}
-                  height={64}
-                  className="mb-3"
-                />
-                <h3 className="font-bold mb-2">Financial Awareness</h3>
-                <p className="text-sm text-gray-600">Understanding your current financial situation</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
-              <div className="flex flex-col items-center text-center">
-                <Image src="/images/goal-setting-icon.png" alt="Goal Setting" width={64} height={64} className="mb-3" />
-                <h3 className="font-bold mb-2">Goal Setting</h3>
-                <p className="text-sm text-gray-600">Planning for future financial milestones</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
-              <div className="flex flex-col items-center text-center">
-                <Image
-                  src="/images/financial-habits-icon.png"
-                  alt="Financial Habits"
-                  width={64}
-                  height={64}
-                  className="mb-3"
-                />
-                <h3 className="font-bold mb-2">Financial Habits</h3>
-                <p className="text-sm text-gray-600">Your daily financial behaviors and practices</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
-              <div className="flex flex-col items-center text-center">
-                <Image
-                  src="/images/money-mindsets-icon.png"
-                  alt="Money Mindsets"
-                  width={64}
-                  height={64}
-                  className="mb-3"
-                />
-                <h3 className="font-bold mb-2">Money Mindsets</h3>
-                <p className="text-sm text-gray-600">Your attitudes and beliefs about money</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
-              <div className="flex flex-col items-center text-center">
-                <Image
-                  src="/images/asset-building-icon.png"
-                  alt="Asset Building"
-                  width={64}
-                  height={64}
-                  className="mb-3"
-                />
-                <h3 className="font-bold mb-2">Asset Building</h3>
-                <p className="text-sm text-gray-600">Growing your wealth through investments and assets</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
-              <div className="flex flex-col items-center text-center">
-                <Image
-                  src="/images/liability-management-icon.png"
-                  alt="Liability Management"
-                  width={64}
-                  height={64}
-                  className="mb-3"
-                />
-                <h3 className="font-bold mb-2">Liability Management</h3>
-                <p className="text-sm text-gray-600">Handling debts and financial obligations effectively</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
-              <div className="flex flex-col items-center text-center">
-                <Image
-                  src="/images/income-streams-icon.png"
-                  alt="Income Streams"
-                  width={64}
-                  height={64}
-                  className="mb-3"
-                />
-                <h3 className="font-bold mb-2">Income Streams</h3>
-                <p className="text-sm text-gray-600">Evaluating your sources of income and their stability</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
-              <div className="flex flex-col items-center text-center">
-                <Image
-                  src="/images/expense-control-icon.png"
-                  alt="Expense Control"
-                  width={64}
-                  height={64}
-                  className="mb-3"
-                />
-                <h3 className="font-bold mb-2">Expense Control</h3>
-                <p className="text-sm text-gray-600">Managing your spending habits and budget discipline</p>
-              </div>
-            </div>
+          <h2 className="text-2xl font-bold mb-6 text-center text-nairawise-dark">The 8 Pillars of Financial Health</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              {
+                name: "Financial Awareness",
+                description: "Understanding your current financial situation",
+                icon: "/images/financial-awareness-icon.png",
+              },
+              {
+                name: "Goal Setting",
+                description: "Creating clear financial objectives",
+                icon: "/images/goal-setting-icon.png",
+              },
+              {
+                name: "Financial Habits",
+                description: "Developing positive money routines",
+                icon: "/images/financial-habits-icon.png",
+              },
+              {
+                name: "Money Mindsets",
+                description: "Cultivating healthy attitudes about money",
+                icon: "/images/money-mindsets-icon.png",
+              },
+              {
+                name: "Asset Building",
+                description: "Growing your wealth through investments",
+                icon: "/images/asset-building-icon.png",
+              },
+              {
+                name: "Liability Management",
+                description: "Handling debt and financial obligations",
+                icon: "/images/liability-management-icon.png",
+              },
+              {
+                name: "Income Streams",
+                description: "Developing multiple sources of income",
+                icon: "/images/income-streams-icon.png",
+              },
+              {
+                name: "Expense Control",
+                description: "Managing spending and budgeting effectively",
+                icon: "/images/expense-control-icon.png",
+              },
+            ].map((pillar, index) => (
+              <Card key={index} className="overflow-hidden hover:shadow-md transition-shadow">
+                <CardContent className="p-4 text-center">
+                  <div className="flex justify-center mb-3">
+                    <Image
+                      src={pillar.icon || "/placeholder.svg"}
+                      alt={pillar.name}
+                      width={64}
+                      height={64}
+                      className="h-16 w-16"
+                    />
+                  </div>
+                  <h3 className="font-semibold text-nairawise-dark mb-1">{pillar.name}</h3>
+                  <p className="text-sm text-nairawise-dark/70">{pillar.description}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
 
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Ready to Assess Your Financial Health?</h2>
-          <p className="text-gray-600 mb-6">
-            The assessment takes approximately 10-15 minutes to complete and provides immediate results.
+          <Button onClick={startAssessment} size="lg" className="bg-red-600 hover:bg-red-700 text-white">
+            Start Your Assessment <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+          <p className="mt-4 text-sm text-nairawise-dark/60">
+            The assessment takes approximately 10-15 minutes to complete.
           </p>
-          <Link href="/assessment/user-info">
-            <Button className="bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-lg flex items-center gap-2">
-              Start Your Assessment <ArrowRight className="ml-2" />
-            </Button>
-          </Link>
         </div>
       </div>
     </div>
