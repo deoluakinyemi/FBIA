@@ -1,81 +1,120 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Mail } from "lucide-react"
+import { ArrowLeft, Download, Mail, Printer } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RadarChart } from "@/components/radar-chart"
-import { getAssessmentDetails } from "@/lib/supabase/assessment-service"
-import { sendAssessmentEmail } from "@/app/actions/email-actions"
+import { PillarScoreCard } from "@/components/pillar-score-card"
 import { useToast } from "@/hooks/use-toast"
-import { PDFDownloadButton } from "@/components/pdf-download-button"
+
+interface User {
+  id: string
+  name: string | null
+  email: string | null
+  phone: string | null
+  marketing_consent: boolean | null
+}
+
+interface Pillar {
+  id: string
+  name: string
+  slug: string
+}
+
+interface PillarScore {
+  id: string
+  pillar_id: string
+  score: number
+  pillars: Pillar
+}
+
+interface Question {
+  id: string
+  question: string
+  pillar_id: string
+}
+
+interface Option {
+  id: string
+  option_text: string
+  score: number
+}
+
+interface Answer {
+  id: string
+  question_id: string
+  option_id: string
+  questions: Question
+  options: Option
+}
+
+interface Assessment {
+  id: string
+  user_id: string
+  overall_score: number
+  completed_at: string
+  created_at: string
+  users: User
+  pillarScores: PillarScore[]
+  answers: Answer[]
+}
 
 export default function ReportDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter()
   const { toast } = useToast()
-  const [assessment, setAssessment] = useState<any>(null)
-  const [scores, setScores] = useState<Record<string, number>>({})
+  const [assessment, setAssessment] = useState<Assessment | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sendingEmail, setSendingEmail] = useState(false)
 
   useEffect(() => {
-    async function loadAssessment() {
-      try {
-        const data = await getAssessmentDetails(params.id)
-        if (!data) {
-          setError("Assessment not found")
-          setLoading(false)
-          return
-        }
+    fetchAssessment()
+  }, [])
 
-        setAssessment(data)
-
-        // Extract pillar scores
-        const pillarScoresMap: Record<string, number> = {}
-        data.pillarScores.forEach((score: any) => {
-          pillarScoresMap[score.pillars.slug] = score.score
-        })
-        setScores(pillarScoresMap)
-
-        setLoading(false)
-      } catch (err) {
-        console.error("Error loading assessment:", err)
-        setError("Failed to load assessment details")
-        setLoading(false)
+  async function fetchAssessment() {
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/admin/assessments/${params.id}`)
+      if (!response.ok) {
+        throw new Error("Failed to fetch assessment")
       }
+      const data = await response.json()
+      setAssessment(data)
+    } catch (err) {
+      console.error("Error fetching assessment:", err)
+      setError("Failed to load assessment. Please try again later.")
+    } finally {
+      setLoading(false)
     }
+  }
 
-    loadAssessment()
-  }, [params.id])
-
-  const handleSendEmail = async () => {
-    if (!assessment?.id) return
-
+  async function sendEmail() {
     setSendingEmail(true)
     try {
-      const result = await sendAssessmentEmail(assessment.id)
+      const response = await fetch(`/api/admin/assessments/${params.id}/send-email`, {
+        method: "POST",
+      })
 
-      if (result.success) {
-        toast({
-          title: "Email Sent",
-          description: `Assessment results sent to ${assessment.users?.email}`,
-        })
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to send email",
-          variant: "destructive",
-        })
+      if (!response.ok) {
+        throw new Error("Failed to send email")
       }
-    } catch (error) {
-      console.error("Error sending email:", error)
+
+      toast({
+        title: "Success",
+        description: "Assessment results email sent successfully",
+      })
+    } catch (err) {
+      console.error("Error sending email:", err)
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "Failed to send email. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -83,49 +122,68 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
     }
   }
 
-  if (loading) {
-    return <div className="py-8 text-center">Loading assessment details...</div>
+  function handlePrint() {
+    window.print()
   }
 
-  if (error) {
+  function getScoreColor(score: number) {
+    if (score >= 80) return "bg-green-100 text-green-800"
+    if (score >= 60) return "bg-blue-100 text-blue-800"
+    if (score >= 40) return "bg-yellow-100 text-yellow-800"
+    return "bg-red-100 text-red-800"
+  }
+
+  function getScoreText(score: number) {
+    if (score >= 80) return "Excellent"
+    if (score >= 60) return "Good"
+    if (score >= 40) return "Fair"
+    return "Needs Improvement"
+  }
+
+  if (loading) {
+    return (
+      <div className="py-8 text-center">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+        <p className="mt-2">Loading assessment...</p>
+      </div>
+    )
+  }
+
+  if (error || !assessment) {
     return (
       <div className="py-8">
         <Card>
           <CardHeader>
             <CardTitle className="text-destructive">Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
+            <CardDescription>{error || "Assessment not found"}</CardDescription>
           </CardHeader>
-          <CardFooter>
+          <CardContent>
             <Link href="/admin/reports">
               <Button variant="outline">
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back to Reports
               </Button>
             </Link>
-          </CardFooter>
+          </CardContent>
         </Card>
       </div>
     )
   }
 
-  if (!assessment) {
-    return (
-      <div className="py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Assessment Not Found</CardTitle>
-            <CardDescription>The requested assessment could not be found.</CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Link href="/admin/reports">
-              <Button variant="outline">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Reports
-              </Button>
-            </Link>
-          </CardFooter>
-        </Card>
-      </div>
-    )
-  }
+  // Prepare data for radar chart
+  const radarData = assessment.pillarScores.map((score) => ({
+    name: score.pillars.name,
+    value: score.score,
+  }))
+
+  // Group answers by pillar
+  const answersByPillar: Record<string, Answer[]> = {}
+  assessment.answers.forEach((answer) => {
+    const pillarId = answer.questions.pillar_id
+    if (!answersByPillar[pillarId]) {
+      answersByPillar[pillarId] = []
+    }
+    answersByPillar[pillarId].push(answer)
+  })
 
   return (
     <div className="space-y-6">
@@ -135,10 +193,23 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Reports
           </Button>
         </Link>
-        <div className="space-x-2">
-          <PDFDownloadButton assessmentId={params.id} userName={assessment.users?.name} />
-          <Button onClick={handleSendEmail} disabled={sendingEmail || !assessment.users?.email}>
-            <Mail className="mr-2 h-4 w-4" /> {sendingEmail ? "Sending..." : "Email Report"}
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="mr-2 h-4 w-4" /> Print
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => window.open(`/api/admin/assessments/${assessment.id}/pdf`, "_blank")}
+          >
+            <Download className="mr-2 h-4 w-4" /> Download PDF
+          </Button>
+          <Button variant="outline" onClick={sendEmail} disabled={sendingEmail}>
+            {sendingEmail ? (
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />
+            ) : (
+              <Mail className="mr-2 h-4 w-4" />
+            )}
+            Send Email
           </Button>
         </div>
       </div>
@@ -148,132 +219,121 @@ export default function ReportDetailPage({ params }: { params: { id: string } })
           <CardTitle>Assessment Report</CardTitle>
           <CardDescription>
             Completed on {new Date(assessment.completed_at).toLocaleDateString()} by{" "}
-            {assessment.users?.name || "Unknown"}
+            {assessment.users?.name || "Anonymous"}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <h3 className="text-lg font-medium mb-2">User Information</h3>
-              <dl className="grid grid-cols-2 gap-2">
-                <dt className="text-sm font-medium text-muted-foreground">Name:</dt>
-                <dd>{assessment.users?.name || "N/A"}</dd>
-                <dt className="text-sm font-medium text-muted-foreground">Email:</dt>
-                <dd>{assessment.users?.email || "N/A"}</dd>
-                <dt className="text-sm font-medium text-muted-foreground">Phone:</dt>
-                <dd>{assessment.users?.phone || "N/A"}</dd>
-                <dt className="text-sm font-medium text-muted-foreground">Marketing Consent:</dt>
-                <dd>{assessment.users?.marketing_consent ? "Yes" : "No"}</dd>
-                <dt className="text-sm font-medium text-muted-foreground">Date:</dt>
-                <dd>{new Date(assessment.completed_at).toLocaleDateString()}</dd>
-                <dt className="text-sm font-medium text-muted-foreground">Overall Score:</dt>
-                <dd>{Math.round(assessment.overall_score * 10)}/10</dd>
-              </dl>
+              <h3 className="text-lg font-semibold mb-2">User Information</h3>
+              <Table>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="font-medium">Name</TableCell>
+                    <TableCell>{assessment.users?.name || "N/A"}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Email</TableCell>
+                    <TableCell>{assessment.users?.email || "N/A"}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Phone</TableCell>
+                    <TableCell>{assessment.users?.phone || "N/A"}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Marketing Consent</TableCell>
+                    <TableCell>{assessment.users?.marketing_consent ? "Yes" : "No"}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
             </div>
             <div>
-              <h3 className="text-lg font-medium mb-2">Assessment Summary</h3>
-              <p className="text-sm text-muted-foreground mb-2">
-                This assessment evaluates financial health across 8 key pillars, with scores from 0-10.
-              </p>
-              <div className="text-sm">
-                <span className="font-medium">Overall Rating: </span>
-                {assessment.overall_score >= 0.8
-                  ? "Excellent"
-                  : assessment.overall_score >= 0.6
-                    ? "Good"
-                    : assessment.overall_score >= 0.4
-                      ? "Fair"
-                      : "Needs Improvement"}
+              <h3 className="text-lg font-semibold mb-2">Overall Score</h3>
+              <div className="flex items-center space-x-4">
+                <div className="text-5xl font-bold">{assessment.overall_score.toFixed(1)}</div>
+                <div>
+                  <Badge className={`text-lg px-3 py-1 ${getScoreColor(assessment.overall_score)}`}>
+                    {getScoreText(assessment.overall_score)}
+                  </Badge>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Completed on {new Date(assessment.completed_at).toLocaleString()}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
+
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-4">Pillar Scores</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex justify-center items-center">
+                <div className="w-full max-w-md">
+                  <RadarChart data={radarData} />
+                </div>
+              </div>
+              <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {assessment.pillarScores.map((pillarScore) => (
+                    <PillarScoreCard
+                      key={pillarScore.id}
+                      name={pillarScore.pillars.name}
+                      score={pillarScore.score}
+                      showDescription={false}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Detailed Responses</h3>
+            <Tabs defaultValue={assessment.pillarScores[0]?.pillars.id}>
+              <TabsList className="mb-4 flex flex-wrap">
+                {assessment.pillarScores.map((pillarScore) => (
+                  <TabsTrigger key={pillarScore.pillars.id} value={pillarScore.pillars.id}>
+                    {pillarScore.pillars.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {assessment.pillarScores.map((pillarScore) => (
+                <TabsContent key={pillarScore.pillars.id} value={pillarScore.pillars.id}>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{pillarScore.pillars.name}</CardTitle>
+                      <CardDescription>
+                        Score: {pillarScore.score.toFixed(1)} - {getScoreText(pillarScore.score)}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Question</TableHead>
+                            <TableHead>Answer</TableHead>
+                            <TableHead>Score</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {answersByPillar[pillarScore.pillars.id]?.map((answer) => (
+                            <TableRow key={answer.id}>
+                              <TableCell className="font-medium">{answer.questions.question}</TableCell>
+                              <TableCell>{answer.options.option_text}</TableCell>
+                              <TableCell>
+                                <Badge className={getScoreColor(answer.options.score)}>{answer.options.score}</Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </div>
         </CardContent>
       </Card>
-
-      <Tabs defaultValue="overview">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="pillar-scores">Pillar Scores</TabsTrigger>
-          <TabsTrigger value="answers">Detailed Answers</TabsTrigger>
-        </TabsList>
-        <TabsContent value="overview" className="pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Financial Health Overview</CardTitle>
-              <CardDescription>Visual representation of scores across all pillars</CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center py-4">
-              <div className="w-full max-w-md aspect-square">
-                <RadarChart scores={scores} />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="pillar-scores" className="pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pillar Scores</CardTitle>
-              <CardDescription>Detailed breakdown of scores for each financial pillar</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Pillar</TableHead>
-                    <TableHead>Score</TableHead>
-                    <TableHead>Rating</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {assessment.pillarScores.map((score: any) => (
-                    <TableRow key={score.id}>
-                      <TableCell className="font-medium">{score.pillars.name}</TableCell>
-                      <TableCell>{Math.round(score.score * 10)}/10</TableCell>
-                      <TableCell>
-                        {score.score >= 0.8
-                          ? "Excellent"
-                          : score.score >= 0.6
-                            ? "Good"
-                            : score.score >= 0.4
-                              ? "Fair"
-                              : "Needs Improvement"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="answers" className="pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Detailed Answers</CardTitle>
-              <CardDescription>All responses provided during the assessment</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Question</TableHead>
-                    <TableHead>Answer</TableHead>
-                    <TableHead>Score</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {assessment.answers.map((answer: any) => (
-                    <TableRow key={answer.id}>
-                      <TableCell className="font-medium">{answer.questions.question}</TableCell>
-                      <TableCell>{answer.options.option_text}</TableCell>
-                      <TableCell>{answer.options.score}/4</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
     </div>
   )
 }

@@ -67,28 +67,50 @@ export default function AssessmentStartPage() {
             <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
               <div className="flex flex-col items-center text-center">
                 <Image
-                  src="/images/income-streams-icon.png"
-                  alt="Income Streams"
+                  src="/images/financial-awareness-icon.png"
+                  alt="Financial Awareness"
                   width={64}
                   height={64}
                   className="mb-3"
                 />
-                <h3 className="font-bold mb-2">Income Streams</h3>
-                <p className="text-sm text-gray-600">Evaluating your sources of income and their stability</p>
+                <h3 className="font-bold mb-2">Financial Awareness</h3>
+                <p className="text-sm text-gray-600">Understanding your current financial situation</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
+              <div className="flex flex-col items-center text-center">
+                <Image src="/images/goal-setting-icon.png" alt="Goal Setting" width={64} height={64} className="mb-3" />
+                <h3 className="font-bold mb-2">Goal Setting</h3>
+                <p className="text-sm text-gray-600">Planning for future financial milestones</p>
               </div>
             </div>
 
             <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
               <div className="flex flex-col items-center text-center">
                 <Image
-                  src="/images/expense-control-icon.png"
-                  alt="Expense Control"
+                  src="/images/financial-habits-icon.png"
+                  alt="Financial Habits"
                   width={64}
                   height={64}
                   className="mb-3"
                 />
-                <h3 className="font-bold mb-2">Expense Control</h3>
-                <p className="text-sm text-gray-600">Managing your spending habits and budget discipline</p>
+                <h3 className="font-bold mb-2">Financial Habits</h3>
+                <p className="text-sm text-gray-600">Your daily financial behaviors and practices</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
+              <div className="flex flex-col items-center text-center">
+                <Image
+                  src="/images/money-mindsets-icon.png"
+                  alt="Money Mindsets"
+                  width={64}
+                  height={64}
+                  className="mb-3"
+                />
+                <h3 className="font-bold mb-2">Money Mindsets</h3>
+                <p className="text-sm text-gray-600">Your attitudes and beliefs about money</p>
               </div>
             </div>
 
@@ -123,50 +145,28 @@ export default function AssessmentStartPage() {
             <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
               <div className="flex flex-col items-center text-center">
                 <Image
-                  src="/images/financial-habits-icon.png"
-                  alt="Financial Habits"
+                  src="/images/income-streams-icon.png"
+                  alt="Income Streams"
                   width={64}
                   height={64}
                   className="mb-3"
                 />
-                <h3 className="font-bold mb-2">Financial Habits</h3>
-                <p className="text-sm text-gray-600">Your daily financial behaviors and practices</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
-              <div className="flex flex-col items-center text-center">
-                <Image src="/images/goal-setting-icon.png" alt="Goal Setting" width={64} height={64} className="mb-3" />
-                <h3 className="font-bold mb-2">Goal Setting</h3>
-                <p className="text-sm text-gray-600">Planning for future financial milestones</p>
+                <h3 className="font-bold mb-2">Income Streams</h3>
+                <p className="text-sm text-gray-600">Evaluating your sources of income and their stability</p>
               </div>
             </div>
 
             <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
               <div className="flex flex-col items-center text-center">
                 <Image
-                  src="/images/retirement-planning.png"
-                  alt="Retirement Planning"
+                  src="/images/expense-control-icon.png"
+                  alt="Expense Control"
                   width={64}
                   height={64}
                   className="mb-3"
                 />
-                <h3 className="font-bold mb-2">Retirement Planning</h3>
-                <p className="text-sm text-gray-600">Preparing for financial security in later years</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
-              <div className="flex flex-col items-center text-center">
-                <Image
-                  src="/images/investment-advisor.png"
-                  alt="Financial Knowledge"
-                  width={64}
-                  height={64}
-                  className="mb-3"
-                />
-                <h3 className="font-bold mb-2">Financial Knowledge</h3>
-                <p className="text-sm text-gray-600">Understanding key financial concepts and principles</p>
+                <h3 className="font-bold mb-2">Expense Control</h3>
+                <p className="text-sm text-gray-600">Managing your spending habits and budget discipline</p>
               </div>
             </div>
           </div>
