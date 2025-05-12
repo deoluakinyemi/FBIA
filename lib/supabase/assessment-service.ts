@@ -86,7 +86,43 @@ export async function getAllQuestionsWithOptions() {
 // Update the createUser function to include phone and marketing consent
 export async function createUser(email: string, name: string, phone?: string, marketingConsent?: boolean) {
   const supabase = createClientClient()
-  const { data, error } = await supabase
+
+  // First check if user exists
+  const { data: existingUser, error: findError } = await supabase
+    .from("users")
+    .select("*")
+    .eq("email", email)
+    .maybeSingle()
+
+  if (findError) {
+    console.error("Error finding user:", findError)
+    throw findError
+  }
+
+  // If user exists, update their info
+  if (existingUser) {
+    const { data: updatedUser, error: updateError } = await supabase
+      .from("users")
+      .update({
+        name,
+        phone: phone || null,
+        marketing_consent: marketingConsent || false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existingUser.id)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error("Error updating user:", updateError)
+      throw updateError
+    }
+
+    return updatedUser
+  }
+
+  // If user doesn't exist, create a new one
+  const { data: newUser, error: createError } = await supabase
     .from("users")
     .insert([
       {
@@ -99,17 +135,17 @@ export async function createUser(email: string, name: string, phone?: string, ma
     .select()
     .single()
 
-  if (error) {
-    console.error("Error creating user:", error)
-    throw error
+  if (createError) {
+    console.error("Error creating user:", createError)
+    throw createError
   }
 
-  return data
+  return newUser
 }
 
 // Function to create a new assessment
 export async function createAssessment(userId: string, overallScore: number) {
-  const supabase = createServerClient()
+  const supabase = createClientClient()
 
   const { data, error } = await supabase
     .from("assessments")
@@ -131,7 +167,7 @@ export async function createAssessment(userId: string, overallScore: number) {
 
 // Function to save pillar scores
 export async function savePillarScores(assessmentId: string, scores: Record<string, number>) {
-  const supabase = createServerClient()
+  const supabase = createClientClient()
 
   // Get all pillars
   const { data: pillars, error: pillarsError } = await supabase.from("pillars").select("id, slug")
@@ -170,7 +206,7 @@ export async function saveAnswers(
   assessmentId: string,
   answers: Record<string, { questionId: string; optionId: string }>,
 ) {
-  const supabase = createServerClient()
+  const supabase = createClientClient()
 
   const answerRecords = Object.entries(answers).map(([, value]) => ({
     assessment_id: assessmentId,

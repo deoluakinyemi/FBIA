@@ -2,6 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ResumeAssessmentButton } from "@/components/resume-assessment-button"
 
 export default function Home() {
   return (
@@ -16,16 +17,19 @@ export default function Home() {
                 Our comprehensive financial assessment helps you understand your current financial health and provides
                 personalized recommendations.
               </p>
-              <Link href="/assessment/start">
-                <Button
-                  size="lg"
-                  className="bg-nairawise-cta hover:bg-nairawise-cta/90 text-white font-bold text-lg px-8 py-6 shadow-lg transition-all hover:shadow-xl hover:scale-105"
-                >
-                  Start Your Assessment
-                  <ChevronRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              {/* Removed Admin Dashboard button */}
+              <div className="flex flex-col sm:flex-row gap-4 items-center">
+                <Link href="/assessment/start">
+                  <Button
+                    size="lg"
+                    className="bg-nairawise-cta hover:bg-nairawise-cta/90 text-white font-bold text-lg px-8 py-6 shadow-lg transition-all hover:shadow-xl hover:scale-105 w-full sm:w-auto"
+                  >
+                    Start Your Assessment
+                    <ChevronRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+                {/* Resume Assessment Button */}
+                <ResumeAssessmentButton />
+              </div>
             </div>
             <div className="md:w-1/2 flex justify-center">
               <Image
@@ -84,15 +88,19 @@ export default function Home() {
             Take our comprehensive assessment today and get a clear picture of your financial situation with actionable
             steps to improve.
           </p>
-          <Link href="/assessment/start">
-            <Button
-              size="lg"
-              className="bg-nairawise-cta hover:bg-nairawise-cta/90 text-white font-bold text-lg px-8 py-6 shadow-md transition-all hover:shadow-lg hover:scale-105"
-            >
-              Start Assessment Now
-              <ChevronRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row justify-center gap-4 items-center">
+            <Link href="/assessment/start">
+              <Button
+                size="lg"
+                className="bg-nairawise-cta hover:bg-nairawise-cta/90 text-white font-bold text-lg px-8 py-6 shadow-md transition-all hover:shadow-lg hover:scale-105"
+              >
+                Start Assessment Now
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            {/* Resume Assessment Button */}
+            <ResumeAssessmentButton />
+          </div>
         </div>
       </section>
 
@@ -147,15 +155,19 @@ export default function Home() {
       <section className="py-12 bg-nairawise-dark text-white">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl font-bold mb-6">Take the First Step Towards Financial Freedom</h2>
-          <Link href="/assessment/start">
-            <Button
-              size="lg"
-              className="bg-nairawise-cta hover:bg-nairawise-cta/90 text-white font-bold shadow-md transition-all hover:shadow-lg hover:scale-105"
-            >
-              Start Your Assessment
-              <ChevronRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row justify-center gap-4 items-center">
+            <Link href="/assessment/start">
+              <Button
+                size="lg"
+                className="bg-nairawise-cta hover:bg-nairawise-cta/90 text-white font-bold shadow-md transition-all hover:shadow-lg hover:scale-105"
+              >
+                Start Your Assessment
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            {/* Resume Assessment Button */}
+            <ResumeAssessmentButton />
+          </div>
         </div>
       </section>
     </main>

@@ -1,73 +1,73 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight } from "lucide-react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { createUser } from "@/lib/supabase/assessment-service"
+import { useToast } from "@/hooks/use-toast"
+
+const formSchema = z.object({
+  name: z.string().min(2, {
+    message: "Name must be at least 2 characters.",
+  }),
+  email: z.string().email({
+    message: "Please enter a valid email address.",
+  }),
+  phone: z.string().optional(),
+  marketingConsent: z.boolean().default(false),
+})
 
 export default function UserInfoPage() {
   const router = useRouter()
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [phone, setPhone] = useState("")
-  const [marketingConsent, setMarketingConsent] = useState(false)
-  const [errors, setErrors] = useState<{ name?: string; email?: string }>({})
+  const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const validateForm = () => {
-    const newErrors: { name?: string; email?: string } = {}
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      marketingConsent: false,
+    },
+  })
 
-    if (!name.trim()) {
-      newErrors.name = "Name is required"
-    }
-
-    if (!email.trim()) {
-      newErrors.email = "Email is required"
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "Email is invalid"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!validateForm()) {
-      return
-    }
-
-    setIsSubmitting(true)
-
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      // Generate a temporary user ID
-      const userId = `user_${Date.now()}`
+      setIsSubmitting(true)
+
+      // Create or update user in Supabase
+      const user = await createUser(values.email, values.name, values.phone, values.marketingConsent)
 
       // Store user info in localStorage
-      const userInfo = {
-        id: userId,
-        name,
-        email,
-        phone,
-        marketingConsent,
-        createdAt: new Date().toISOString(),
-      }
-
-      localStorage.setItem("userInfo", JSON.stringify(userInfo))
-      localStorage.setItem("currentUserId", userId)
+      localStorage.setItem(
+        "userInfo",
+        JSON.stringify({
+          id: user.id,
+          name: values.name,
+          email: values.email,
+          phone: values.phone,
+          marketingConsent: values.marketingConsent,
+        }),
+      )
 
       // Navigate to assessment
       router.push("/assessment")
     } catch (error) {
       console.error("Error saving user info:", error)
+      toast({
+        title: "Error",
+        description: "There was a problem saving your information. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -78,70 +78,75 @@ export default function UserInfoPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl text-nairawise-dark">Your Information</CardTitle>
-          <CardDescription>Please provide your details before starting the assessment.</CardDescription>
+          <CardDescription>Please provide your details before starting the financial assessment.</CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-nairawise-dark">
-                Full Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your full name"
-                className={errors.name ? "border-red-500" : ""}
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-nairawise-dark">
-                Email Address <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email address"
-                className={errors.email ? "border-red-500" : ""}
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="john@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-nairawise-dark">
-                Phone Number (Optional)
-              </Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Enter your phone number"
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="+234 800 123 4567" {...field} />
+                    </FormControl>
+                    <FormDescription>We may use this to follow up with personalized advice.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-
-            <div className="flex items-center space-x-2 pt-2">
-              <Checkbox
-                id="marketing"
-                checked={marketingConsent}
-                onCheckedChange={(checked) => setMarketingConsent(checked as boolean)}
+              <FormField
+                control={form.control}
+                name="marketingConsent"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>I agree to receive financial tips and updates via email</FormLabel>
+                      <FormDescription>You can unsubscribe at any time.</FormDescription>
+                    </div>
+                  </FormItem>
+                )}
               />
-              <Label htmlFor="marketing" className="text-sm text-nairawise-dark/80">
-                I agree to receive financial tips and updates via email
-              </Label>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" disabled={isSubmitting} className="w-full bg-red-600 hover:bg-red-700 text-white">
-              {isSubmitting ? "Processing..." : "Continue to Assessment"}
-              {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
-            </Button>
-          </CardFooter>
-        </form>
+              <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Continue to Assessment"}
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+        <CardFooter className="text-xs text-center text-nairawise-dark/60">
+          Your information is securely stored and will only be used for this assessment.
+        </CardFooter>
       </Card>
     </div>
   )
