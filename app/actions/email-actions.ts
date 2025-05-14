@@ -18,12 +18,20 @@ export async function sendAssessmentEmail(assessmentId: string) {
     }
 
     // Send email
-    await sendEmail(
+    const result = await sendEmail(
       assessmentDetails.users.email,
       assessmentDetails.users.name || "User",
       assessmentId,
       assessmentDetails.overall_score,
     )
+
+    // If it's a mock result, add a note
+    if (result.mock) {
+      return {
+        success: true,
+        warning: "Email sending is disabled. This is a simulated success.",
+      }
+    }
 
     return { success: true }
   } catch (error) {

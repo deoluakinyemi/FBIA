@@ -1,146 +1,142 @@
 "use client"
 
-import type React from "react"
-
-import { useEffect, useState } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import Image from "next/image"
-import { BarChart3, FileText, Layout, LogOut, PieChart, Settings, Users, FileQuestion, Globe } from "lucide-react"
-
+import { usePathname } from "next/navigation"
+import { BarChart, FileText, Home, Settings, Users, Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
+import { createClientClient } from "@/lib/supabase/client"
 
 export function Sidebar() {
-  const router = useRouter()
   const pathname = usePathname()
-  const { toast } = useToast()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check if user is authenticated
-    const adminAuthenticated = localStorage.getItem("adminAuthenticated") === "true"
-    setIsAuthenticated(adminAuthenticated)
-    setIsLoading(false)
+    const checkAdminStatus = async () => {
+      try {
+        const supabase = createClientClient()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
-    // Redirect to login if not authenticated and not already on login page
-    if (!adminAuthenticated && pathname !== "/admin/login") {
-      router.push("/admin/login")
+        if (session) {
+          // Check if user has admin role
+          const { data, error } = await supabase.from("admin_users").select("*").eq("user_id", session.user.id).single()
+
+          if (data && !error) {
+            setIsAdmin(true)
+          }
+        }
+      } catch (error) {
+        console.error("Error checking admin status:", error)
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [pathname, router])
 
-  const handleLogout = () => {
-    localStorage.removeItem("adminAuthenticated")
-    toast({
-      title: "Logged out",
-      description: "You have been logged out successfully",
-    })
-    router.push("/admin/login")
-  }
+    checkAdminStatus()
+  }, [])
 
-  // Show loading state
-  if (isLoading) {
+  // If not admin and not loading, redirect to login
+  useEffect(() => {
+    if (!loading && !isAdmin) {
+      window.location.href = "/admin/login"
+    }
+  }, [loading, isAdmin])
+
+  if (loading) {
     return (
-      <div className="w-64 bg-white border-r border-nairawise-medium/20 h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nairawise-dark"></div>
+      <div className="hidden md:flex w-64 flex-col h-screen bg-gray-100 border-r p-4">
+        <div className="flex items-center justify-center h-full">
+          <p>Loading...</p>
+        </div>
       </div>
     )
   }
 
-  // If not authenticated, show nothing
-  if (!isAuthenticated && pathname === "/admin/login") {
+  if (!isAdmin) {
     return null
   }
 
-  // If authenticated, show sidebar
+  const navItems = [
+    { href: "/admin/dashboard", label: "Dashboard", icon: Home },
+    { href: "/admin/reports", label: "Reports", icon: FileText },
+    { href: "/admin/users", label: "Users", icon: Users },
+    { href: "/admin/analytics", label: "Analytics", icon: BarChart },
+    { href: "/admin/settings", label: "Settings", icon: Settings },
+  ]
+
   return (
-    <div className="w-64 bg-white border-r border-nairawise-medium/20 h-screen flex flex-col">
-      <div className="p-4 border-b border-nairawise-medium/20 bg-nairawise-dark text-white">
-        <div className="flex justify-center mb-2">
-          <Image src="/images/nairawise-logo.png" alt="NairaWise" width={120} height={48} className="h-10 w-auto" />
+    <>
+      {/* Mobile menu button */}
+      <Button
+        variant="outline"
+        size="icon"
+        className="fixed top-4 left-4 z-50 md:hidden"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {isOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+        <span className="sr-only">Toggle menu</span>
+      </Button>
+
+      {/* Sidebar for mobile */}
+      {isOpen && (
+        <div className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden" onClick={() => setIsOpen(false)}>
+          <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4">
+              <h2 className="text-xl font-bold mb-6">Admin Panel</h2>
+              <nav className="space-y-1">
+                {navItems.map((item) => {
+                  const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
+                  const Icon = item.icon
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
+                        isActive ? "bg-gray-200 text-gray-900" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                      }`}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Icon className="mr-3 h-5 w-5" />
+                      {item.label}
+                    </Link>
+                  )
+                })}
+              </nav>
+            </div>
+          </div>
         </div>
-        <p className="text-sm text-white/80 text-center">Admin Dashboard</p>
+      )}
+
+      {/* Sidebar for desktop */}
+      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
+        <div className="flex flex-col flex-grow bg-white border-r">
+          <div className="p-4">
+            <h2 className="text-xl font-bold mb-6">Admin Panel</h2>
+            <nav className="space-y-1">
+              {navItems.map((item) => {
+                const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`)
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${
+                      isActive ? "bg-gray-200 text-gray-900" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    }`}
+                  >
+                    <Icon className="mr-3 h-5 w-5" />
+                    {item.label}
+                  </Link>
+                )
+              })}
+            </nav>
+          </div>
+        </div>
       </div>
-
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        <NavItem
-          href="/admin/dashboard"
-          icon={<BarChart3 className="h-4 w-4" />}
-          active={pathname === "/admin/dashboard"}
-        >
-          Dashboard
-        </NavItem>
-        <NavItem
-          href="/admin/analytics"
-          icon={<PieChart className="h-4 w-4" />}
-          active={pathname === "/admin/analytics"}
-        >
-          Analytics
-        </NavItem>
-        <NavItem
-          href="/admin/questions"
-          icon={<FileQuestion className="h-4 w-4" />}
-          active={pathname.startsWith("/admin/questions")}
-        >
-          Questions
-        </NavItem>
-        <NavItem href="/admin/users" icon={<Users className="h-4 w-4" />} active={pathname.startsWith("/admin/users")}>
-          Users
-        </NavItem>
-        <NavItem
-          href="/admin/reports"
-          icon={<FileText className="h-4 w-4" />}
-          active={pathname.startsWith("/admin/reports")}
-        >
-          Reports
-        </NavItem>
-        <NavItem
-          href="/admin/footer-settings"
-          icon={<Layout className="h-4 w-4" />}
-          active={pathname === "/admin/footer-settings"}
-        >
-          Footer Settings
-        </NavItem>
-        <NavItem href="/admin/settings" icon={<Settings className="h-4 w-4" />} active={pathname === "/admin/settings"}>
-          Settings
-        </NavItem>
-        <NavItem href="/" icon={<Globe className="h-4 w-4" />} active={false}>
-          View Site
-        </NavItem>
-      </nav>
-
-      <div className="p-4 border-t border-nairawise-medium/20 mt-auto">
-        <Button
-          variant="outline"
-          className="w-full justify-start border-nairawise-dark text-nairawise-dark hover:bg-nairawise-dark hover:text-white"
-          onClick={handleLogout}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          Logout
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-interface NavItemProps {
-  href: string
-  icon: React.ReactNode
-  active: boolean
-  children: React.ReactNode
-}
-
-function NavItem({ href, icon, active, children }: NavItemProps) {
-  return (
-    <Link
-      href={href}
-      className={`flex items-center px-3 py-2 text-sm rounded-md ${
-        active ? "bg-nairawise-dark text-white" : "text-nairawise-dark hover:bg-nairawise-cream"
-      }`}
-    >
-      <span className="mr-2">{icon}</span>
-      {children}
-    </Link>
+    </>
   )
 }

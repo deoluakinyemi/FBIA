@@ -1,4 +1,7 @@
-export function calculateScores(answers: Record<string, number>): Record<string, number> {
+export function calculateScores(
+  answers: Record<string, { questionId: string; optionId: string; score: number }>,
+): Record<string, number> {
+  // Define the exact pillar slugs as they appear in the question IDs
   const pillars = ["awareness", "goals", "habits", "mindsets", "assets", "liabilities", "income", "expenses"]
 
   const scores: Record<string, number> = {}
@@ -9,20 +12,25 @@ export function calculateScores(answers: Record<string, number>): Record<string,
     let questionCount = 0
 
     // Find all answers for this pillar
-    Object.entries(answers).forEach(([questionId, score]) => {
+    Object.entries(answers).forEach(([questionId, answer]) => {
       if (questionId.startsWith(`${pillar}-`)) {
-        pillarTotal += score
+        // The score in the answer is already between 0 and 1 (e.g., 0.1, 0.3, 0.5, 0.7, 0.9)
+        // We need to multiply by 10 to get a score out of 10
+        pillarTotal += answer.score * 10
         questionCount++
       }
     })
 
-    // Calculate average score for this pillar (normalized to 0-1)
+    // Calculate average score for this pillar (out of 10)
     if (questionCount > 0) {
-      scores[pillar] = pillarTotal / (questionCount * 4) // Divide by max score per question (4)
+      scores[pillar] = pillarTotal / questionCount
     } else {
       scores[pillar] = 0
     }
   })
+
+  // Log the scores to help with debugging
+  console.log("Calculated scores:", scores)
 
   return scores
 }
@@ -31,7 +39,7 @@ export function getRecommendations(scores: Record<string, number>): Record<strin
   const recommendations: Record<string, string[]> = {}
 
   // Awareness recommendations
-  if (scores.awareness < 0.6) {
+  if (scores.awareness < 6) {
     recommendations.awareness = [
       "Set up a system to track all your income and expenses",
       "Schedule monthly financial review sessions",
@@ -49,7 +57,7 @@ export function getRecommendations(scores: Record<string, number>): Record<strin
   }
 
   // Goals recommendations
-  if (scores.goals < 0.6) {
+  if (scores.goals < 6) {
     recommendations.goals = [
       "Define 3-5 specific, measurable financial goals with deadlines",
       "Break down each goal into smaller, actionable steps",
@@ -67,7 +75,7 @@ export function getRecommendations(scores: Record<string, number>): Record<strin
   }
 
   // Habits recommendations
-  if (scores.habits < 0.6) {
+  if (scores.habits < 6) {
     recommendations.habits = [
       "Set up automatic transfers to savings on payday",
       "Implement a 24-hour rule before making non-essential purchases",
@@ -85,7 +93,7 @@ export function getRecommendations(scores: Record<string, number>): Record<strin
   }
 
   // Mindsets recommendations
-  if (scores.mindsets < 0.6) {
+  if (scores.mindsets < 6) {
     recommendations.mindsets = [
       "Read books on financial mindset and psychology of money",
       "Practice gratitude for your current financial situation while working to improve it",
@@ -103,7 +111,7 @@ export function getRecommendations(scores: Record<string, number>): Record<strin
   }
 
   // Assets recommendations
-  if (scores.assets < 0.6) {
+  if (scores.assets < 6) {
     recommendations.assets = [
       "Start investing regularly, even with small amounts",
       "Learn about different asset classes and their characteristics",
@@ -121,7 +129,7 @@ export function getRecommendations(scores: Record<string, number>): Record<strin
   }
 
   // Liabilities recommendations
-  if (scores.liabilities < 0.6) {
+  if (scores.liabilities < 6) {
     recommendations.liabilities = [
       "List all debts with interest rates and minimum payments",
       "Create a debt repayment strategy (snowball or avalanche method)",
@@ -139,7 +147,7 @@ export function getRecommendations(scores: Record<string, number>): Record<strin
   }
 
   // Income recommendations
-  if (scores.income < 0.6) {
+  if (scores.income < 6) {
     recommendations.income = [
       "Identify skills you can develop to increase your primary income",
       "Explore side hustle opportunities aligned with your skills",
@@ -157,7 +165,7 @@ export function getRecommendations(scores: Record<string, number>): Record<strin
   }
 
   // Expenses recommendations
-  if (scores.expenses < 0.6) {
+  if (scores.expenses < 6) {
     recommendations.expenses = [
       "Create a detailed budget aligned with your values",
       "Identify and eliminate unnecessary recurring expenses",

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Eye, Download, Mail, Search } from "lucide-react"
+import { Eye, Download, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,108 +10,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-
-interface User {
-  id: string
-  name: string
-  email: string
-  phone?: string
-  marketing_consent?: boolean
-}
-
-interface Assessment {
-  id: string
-  user_id: string
-  overall_score: number
-  completed_at: string
-  users: User
-}
+import { getAllAssessments } from "@/lib/supabase/assessment-service"
 
 export default function ReportsPage() {
   const { toast } = useToast()
-  const [assessments, setAssessments] = useState<Assessment[]>([])
+  const [assessments, setAssessments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [sendingEmail, setSendingEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    // Simulate fetching assessments from API
     const fetchAssessments = async () => {
       try {
-        // Mock data for testing
-        const mockAssessments: Assessment[] = [
-          {
-            id: "assessment_1",
-            user_id: "user_1",
-            overall_score: 0.78,
-            completed_at: new Date().toISOString(),
-            users: {
-              id: "user_1",
-              name: "John Doe",
-              email: "john@example.com",
-              phone: "+234 800 123 4567",
-              marketing_consent: true,
-            },
-          },
-          {
-            id: "assessment_2",
-            user_id: "user_2",
-            overall_score: 0.65,
-            completed_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-            users: {
-              id: "user_2",
-              name: "Jane Smith",
-              email: "jane@example.com",
-              phone: "+234 800 987 6543",
-              marketing_consent: false,
-            },
-          },
-          {
-            id: "assessment_3",
-            user_id: "user_3",
-            overall_score: 0.42,
-            completed_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-            users: {
-              id: "user_3",
-              name: "Michael Johnson",
-              email: "michael@example.com",
-              phone: "+234 800 456 7890",
-              marketing_consent: true,
-            },
-          },
-          {
-            id: "assessment_4",
-            user_id: "user_4",
-            overall_score: 0.91,
-            completed_at: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
-            users: {
-              id: "user_4",
-              name: "Sarah Williams",
-              email: "sarah@example.com",
-              phone: "+234 800 789 0123",
-              marketing_consent: true,
-            },
-          },
-          {
-            id: "assessment_5",
-            user_id: "user_5",
-            overall_score: 0.53,
-            completed_at: new Date(Date.now() - 345600000).toISOString(), // 4 days ago
-            users: {
-              id: "user_5",
-              name: "David Brown",
-              email: "david@example.com",
-              phone: "+234 800 234 5678",
-              marketing_consent: false,
-            },
-          },
-        ]
-
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        setAssessments(mockAssessments)
+        const data = await getAllAssessments()
+        setAssessments(data)
         setLoading(false)
       } catch (err) {
         console.error("Error fetching assessments:", err)
@@ -122,28 +34,6 @@ export default function ReportsPage() {
 
     fetchAssessments()
   }, [])
-
-  const handleSendEmail = async (assessmentId: string) => {
-    setSendingEmail(assessmentId)
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      toast({
-        title: "Email Sent",
-        description: "Assessment results email sent successfully",
-      })
-    } catch (err) {
-      console.error("Error sending email:", err)
-      toast({
-        title: "Error",
-        description: "Failed to send email. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setSendingEmail(null)
-    }
-  }
 
   const filteredAssessments = assessments.filter(
     (assessment) =>
@@ -178,7 +68,7 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <h1 className="text-2xl font-bold">Assessment Reports</h1>
 
       <Card>
@@ -245,6 +135,7 @@ export default function ReportsPage() {
                           size="icon"
                           title="Download PDF"
                           onClick={() => {
+                            window.open(`/api/admin/assessments/${assessment.id}/pdf`, "_blank")
                             toast({
                               title: "PDF Generated",
                               description: "Assessment PDF has been generated and downloaded",
@@ -253,20 +144,6 @@ export default function ReportsPage() {
                         >
                           <Download className="h-4 w-4" />
                           <span className="sr-only">Download</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          title="Send Email"
-                          disabled={sendingEmail === assessment.id}
-                          onClick={() => handleSendEmail(assessment.id)}
-                        >
-                          {sendingEmail === assessment.id ? (
-                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent" />
-                          ) : (
-                            <Mail className="h-4 w-4" />
-                          )}
-                          <span className="sr-only">Email</span>
                         </Button>
                       </div>
                     </TableCell>

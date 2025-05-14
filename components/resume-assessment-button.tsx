@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Loader2, PlayCircle } from "lucide-react"
 import { getDraftAssessment } from "@/lib/supabase/draft-assessment-service"
-import { formatDistanceToNow } from "date-fns"
 import { useToast } from "@/hooks/use-toast"
 
 export function ResumeAssessmentButton() {
@@ -18,18 +17,29 @@ export function ResumeAssessmentButton() {
   useEffect(() => {
     async function checkForDraft() {
       try {
-        // Get user ID from localStorage
-        const userId = localStorage.getItem("currentUserId")
-        if (!userId) {
+        // Get user info from localStorage
+        const userInfoStr = typeof window !== "undefined" ? localStorage.getItem("userInfo") : null
+        if (!userInfoStr) {
           setLoading(false)
           return
         }
 
-        // Check if user has a draft assessment
-        const draft = await getDraftAssessment(userId)
-        if (draft) {
-          setHasDraft(true)
-          setLastUpdated(draft.lastUpdated)
+        try {
+          const userInfo = JSON.parse(userInfoStr)
+          if (!userInfo || !userInfo.id) {
+            setLoading(false)
+            return
+          }
+
+          // Check if user has a draft assessment
+          const draft = await getDraftAssessment(userInfo.id)
+          if (draft) {
+            setHasDraft(true)
+            setLastUpdated(draft.lastUpdated)
+          }
+        } catch (parseError) {
+          console.error("Error parsing user info:", parseError)
+          setLoading(false)
         }
       } catch (error) {
         console.error("Error checking for draft assessment:", error)
@@ -38,7 +48,12 @@ export function ResumeAssessmentButton() {
       }
     }
 
-    checkForDraft()
+    // Only run on client-side
+    if (typeof window !== "undefined") {
+      checkForDraft()
+    } else {
+      setLoading(false)
+    }
   }, [])
 
   const handleResume = () => {
@@ -68,6 +83,9 @@ export function ResumeAssessmentButton() {
     return null
   }
 
+  // Format the date in a safe way
+  const formattedDate = lastUpdated ? new Date(lastUpdated).toLocaleString() : "recently"
+
   return (
     <div className="mt-6 flex flex-col items-center">
       <Button
@@ -77,9 +95,7 @@ export function ResumeAssessmentButton() {
         <PlayCircle className="h-5 w-5" />
         Resume Your Assessment
       </Button>
-      {lastUpdated && (
-        <p className="text-sm text-gray-600 mt-2">Last saved {formatDistanceToNow(new Date(lastUpdated))} ago</p>
-      )}
+      {lastUpdated && <p className="text-sm text-gray-600 mt-2">Last saved {formattedDate}</p>}
     </div>
   )
 }

@@ -4,33 +4,30 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
-import * as z from "zod"
+import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { createUser } from "@/lib/supabase/assessment-service"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
+  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  email: z.string().email({ message: "Please enter a valid email address." }),
   phone: z.string().optional(),
   marketingConsent: z.boolean().default(false),
 })
+
+type FormValues = z.infer<typeof formSchema>
 
 export default function UserInfoPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
@@ -40,26 +37,20 @@ export default function UserInfoPage() {
     },
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const onSubmit = async (data: FormValues) => {
+    setIsSubmitting(true)
     try {
-      setIsSubmitting(true)
-
-      // Create or update user in Supabase
-      const user = await createUser(values.email, values.name, values.phone, values.marketingConsent)
+      // Generate a temporary user ID
+      const tempUserId = `user_${Date.now()}`
 
       // Store user info in localStorage
-      localStorage.setItem(
-        "userInfo",
-        JSON.stringify({
-          id: user.id,
-          name: values.name,
-          email: values.email,
-          phone: values.phone,
-          marketingConsent: values.marketingConsent,
-        }),
-      )
+      const userInfo = {
+        id: tempUserId,
+        ...data,
+      }
+      localStorage.setItem("userInfo", JSON.stringify(userInfo))
 
-      // Navigate to assessment
+      // Redirect to assessment
       router.push("/assessment")
     } catch (error) {
       console.error("Error saving user info:", error)
@@ -78,7 +69,7 @@ export default function UserInfoPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl text-nairawise-dark">Your Information</CardTitle>
-          <CardDescription>Please provide your details before starting the financial assessment.</CardDescription>
+          <CardDescription>Please provide your details to start the financial assessment.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -118,7 +109,6 @@ export default function UserInfoPage() {
                     <FormControl>
                       <Input placeholder="+234 800 123 4567" {...field} />
                     </FormControl>
-                    <FormDescription>We may use this to follow up with personalized advice.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -132,21 +122,18 @@ export default function UserInfoPage() {
                       <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel>I agree to receive financial tips and updates via email</FormLabel>
-                      <FormDescription>You can unsubscribe at any time.</FormDescription>
+                      <FormLabel>I agree to receive marketing communications</FormLabel>
+                      <FormDescription>We'll send you helpful financial tips and updates.</FormDescription>
                     </div>
                   </FormItem>
                 )}
               />
               <Button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white" disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Continue to Assessment"}
+                {isSubmitting ? "Submitting..." : "Start Assessment"}
               </Button>
             </form>
           </Form>
         </CardContent>
-        <CardFooter className="text-xs text-center text-nairawise-dark/60">
-          Your information is securely stored and will only be used for this assessment.
-        </CardFooter>
       </Card>
     </div>
   )

@@ -2,22 +2,20 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, ArrowRight, Save, RefreshCw } from "lucide-react"
+import { ArrowLeft, ArrowRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useToast } from "@/hooks/use-toast"
-import { getAllQuestionsWithOptions } from "@/lib/supabase/assessment-service"
 import {
-  saveDraftAssessment,
-  getDraftAssessment,
-  deleteDraftAssessment,
-  type DraftAnswer,
-} from "@/lib/supabase/draft-assessment-service"
+  getAllQuestionsWithOptions,
+  createAssessment,
+  savePillarScores,
+  saveAnswers,
+} from "@/lib/supabase/assessment-service"
 
 // Define types locally to avoid import issues
 interface Option {
@@ -40,6 +38,106 @@ interface UserInfo {
   marketingConsent?: boolean
 }
 
+// Mock questions for fallback
+const mockQuestions = {
+  awareness: [
+    {
+      id: "q1",
+      question: "How would you rate your understanding of your current financial situation?",
+      options: [
+        { id: "q1a1", option_text: "Very poor - I have no idea about my finances", score: 0.1 },
+        { id: "q1a2", option_text: "Poor - I have a vague idea but many gaps", score: 0.3 },
+        { id: "q1a3", option_text: "Average - I understand the basics of my finances", score: 0.5 },
+        { id: "q1a4", option_text: "Good - I have a solid understanding of my finances", score: 0.7 },
+        { id: "q1a5", option_text: "Excellent - I have complete knowledge of my finances", score: 0.9 },
+      ],
+    },
+    {
+      id: "q2",
+      question: "How often do you review your financial statements?",
+      options: [
+        { id: "q2a1", option_text: "Never", score: 0.1 },
+        { id: "q2a2", option_text: "Rarely (once a year or less)", score: 0.3 },
+        { id: "q2a3", option_text: "Sometimes (every few months)", score: 0.5 },
+        { id: "q2a4", option_text: "Often (monthly)", score: 0.7 },
+        { id: "q2a5", option_text: "Very frequently (weekly or more)", score: 0.9 },
+      ],
+    },
+  ],
+  goals: [
+    {
+      id: "q3",
+      question: "Do you have clearly defined financial goals?",
+      options: [
+        { id: "q3a1", option_text: "No goals at all", score: 0.1 },
+        { id: "q3a2", option_text: "Vague ideas but nothing specific", score: 0.3 },
+        { id: "q3a3", option_text: "Some goals but not well-defined", score: 0.5 },
+        { id: "q3a4", option_text: "Several clear goals", score: 0.7 },
+        { id: "q3a5", option_text: "Comprehensive, specific goals with timelines", score: 0.9 },
+      ],
+    },
+    {
+      id: "q4",
+      question: "How often do you review and adjust your financial goals?",
+      options: [
+        { id: "q4a1", option_text: "Never", score: 0.1 },
+        { id: "q4a2", option_text: "Rarely (once a year or less)", score: 0.3 },
+        { id: "q4a3", option_text: "Sometimes (every few months)", score: 0.5 },
+        { id: "q4a4", option_text: "Often (monthly)", score: 0.7 },
+        { id: "q4a5", option_text: "Very frequently (weekly or more)", score: 0.9 },
+      ],
+    },
+  ],
+  habits: [
+    {
+      id: "q5",
+      question: "How consistently do you follow a budget?",
+      options: [
+        { id: "q5a1", option_text: "I don't have a budget", score: 0.1 },
+        { id: "q5a2", option_text: "I have a budget but rarely follow it", score: 0.3 },
+        { id: "q5a3", option_text: "I follow my budget sometimes", score: 0.5 },
+        { id: "q5a4", option_text: "I follow my budget most of the time", score: 0.7 },
+        { id: "q5a5", option_text: "I strictly follow my budget all the time", score: 0.9 },
+      ],
+    },
+    {
+      id: "q6",
+      question: "How often do you save money?",
+      options: [
+        { id: "q6a1", option_text: "Never", score: 0.1 },
+        { id: "q6a2", option_text: "Rarely (when I have extra money)", score: 0.3 },
+        { id: "q6a3", option_text: "Sometimes (not consistently)", score: 0.5 },
+        { id: "q6a4", option_text: "Often (most months)", score: 0.7 },
+        { id: "q6a5", option_text: "Always (every month without fail)", score: 0.9 },
+      ],
+    },
+  ],
+  mindsets: [
+    {
+      id: "q7",
+      question: "How do you view money in your life?",
+      options: [
+        { id: "q7a1", option_text: "Money is always a source of stress and worry", score: 0.1 },
+        { id: "q7a2", option_text: "Money is often a problem in my life", score: 0.3 },
+        { id: "q7a3", option_text: "Money is a necessary tool but I'm neutral about it", score: 0.5 },
+        { id: "q7a4", option_text: "Money is an opportunity for growth and security", score: 0.7 },
+        { id: "q7a5", option_text: "Money is a positive force that enables my goals", score: 0.9 },
+      ],
+    },
+    {
+      id: "q8",
+      question: "How confident are you in making financial decisions?",
+      options: [
+        { id: "q8a1", option_text: "Not confident at all - I avoid financial decisions", score: 0.1 },
+        { id: "q8a2", option_text: "Slightly confident - I make decisions but with great anxiety", score: 0.3 },
+        { id: "q8a3", option_text: "Moderately confident - I can make basic decisions", score: 0.5 },
+        { id: "q8a4", option_text: "Very confident - I make most decisions with ease", score: 0.7 },
+        { id: "q8a5", option_text: "Extremely confident - I make all financial decisions comfortably", score: 0.9 },
+      ],
+    },
+  ],
+}
+
 export default function AssessmentPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -47,156 +145,56 @@ export default function AssessmentPage() {
   const [pillars, setPillars] = useState<string[]>([])
   const [currentPillarIndex, setCurrentPillarIndex] = useState(0)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, DraftAnswer>>({})
+  const [answers, setAnswers] = useState<Record<string, { questionId: string; optionId: string; score: number }>>({})
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [lastSaved, setLastSaved] = useState<string | null>(null)
-  const [hasDraft, setHasDraft] = useState(false)
 
-  // Load user info and questions
+  // One-time initialization
   useEffect(() => {
-    const loadUserInfo = () => {
-      const storedUserInfo = localStorage.getItem("userInfo")
-
-      if (!storedUserInfo) {
-        // Redirect to user info page if no user info
-        router.push("/assessment/user-info")
-        return null
-      }
-
-      try {
-        return JSON.parse(storedUserInfo) as UserInfo
-      } catch (err) {
-        console.error("Error parsing user info:", err)
-        router.push("/assessment/user-info")
-        return null
-      }
+    // Check if user info exists
+    const userInfoStr = localStorage.getItem("userInfo")
+    if (!userInfoStr) {
+      // Redirect to user info page if no user info
+      router.push("/assessment/user-info")
+      return
     }
-
-    const loadData = async () => {
-      try {
-        setLoading(true)
-
-        // Load user info
-        const user = loadUserInfo()
-        if (!user) return
-        setUserInfo(user)
-
-        // Fetch questions from Supabase
-        const questionsData = await getAllQuestionsWithOptions()
-        if (Object.keys(questionsData).length === 0) {
-          setError("No questions available. Please try again later.")
-          return
-        }
-
-        setQuestions(questionsData)
-        setPillars(Object.keys(questionsData))
-
-        // Check for draft assessment
-        const draft = await getDraftAssessment(user.id)
-        if (draft) {
-          setHasDraft(true)
-
-          // If user confirms they want to resume, load the draft data
-          const shouldResume = window.confirm(
-            "You have an unfinished assessment. Would you like to resume where you left off?",
-          )
-
-          if (shouldResume) {
-            setCurrentPillarIndex(draft.currentPillarIndex)
-            setCurrentQuestionIndex(draft.currentQuestionIndex)
-            setAnswers(draft.answers)
-
-            // Set selected option if we're on a question that was already answered
-            const currentKey = `${Object.keys(questionsData)[draft.currentPillarIndex]}-${draft.currentQuestionIndex}`
-            if (draft.answers[currentKey]) {
-              setSelectedOption(draft.answers[currentKey].optionId)
-            }
-
-            setLastSaved(new Date(draft.lastUpdated).toLocaleString())
-
-            toast({
-              title: "Draft loaded",
-              description: "Your previous progress has been restored.",
-              duration: 3000,
-            })
-          }
-        }
-      } catch (err) {
-        console.error("Error loading data:", err)
-        setError("Failed to load assessment data. Please try again later.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadData()
-  }, [router, toast])
-
-  // Auto-save progress when answers change
-  useEffect(() => {
-    const autoSaveProgress = async () => {
-      if (!userInfo || Object.keys(answers).length === 0) return
-
-      try {
-        setSaving(true)
-        await saveDraftAssessment({
-          userId: userInfo.id,
-          currentPillarIndex,
-          currentQuestionIndex,
-          answers,
-        })
-
-        const now = new Date().toLocaleString()
-        setLastSaved(now)
-      } catch (err) {
-        console.error("Error auto-saving progress:", err)
-      } finally {
-        setSaving(false)
-      }
-    }
-
-    // Use a debounce to avoid too many saves
-    const timeoutId = setTimeout(autoSaveProgress, 2000)
-    return () => clearTimeout(timeoutId)
-  }, [answers, currentPillarIndex, currentQuestionIndex, userInfo])
-
-  // Manual save function
-  const handleSaveProgress = async () => {
-    if (!userInfo) return
 
     try {
-      setSaving(true)
-      await saveDraftAssessment({
-        userId: userInfo.id,
-        currentPillarIndex,
-        currentQuestionIndex,
-        answers,
-      })
+      // Parse user info
+      const parsedUserInfo = JSON.parse(userInfoStr) as UserInfo
+      setUserInfo(parsedUserInfo)
 
-      const now = new Date().toLocaleString()
-      setLastSaved(now)
+      // Load questions
+      const loadQuestions = async () => {
+        try {
+          const questionsData = await getAllQuestionsWithOptions()
 
-      toast({
-        title: "Progress saved",
-        description: "Your assessment progress has been saved.",
-        duration: 3000,
-      })
+          if (questionsData && Object.keys(questionsData).length > 0) {
+            setQuestions(questionsData)
+            setPillars(Object.keys(questionsData))
+          } else {
+            console.log("No questions returned from Supabase, using mock data")
+            setQuestions(mockQuestions)
+            setPillars(Object.keys(mockQuestions))
+          }
+
+          setLoading(false)
+        } catch (err) {
+          console.error("Error loading questions:", err)
+          setQuestions(mockQuestions)
+          setPillars(Object.keys(mockQuestions))
+          setLoading(false)
+        }
+      }
+
+      loadQuestions()
     } catch (err) {
-      console.error("Error saving progress:", err)
-      toast({
-        title: "Save failed",
-        description: "There was an error saving your progress.",
-        variant: "destructive",
-        duration: 3000,
-      })
-    } finally {
-      setSaving(false)
+      console.error("Error parsing user info:", err)
+      router.push("/assessment/user-info")
     }
-  }
+  }, [router])
 
   // Check if we have a current question
   const currentPillar = pillars[currentPillarIndex]
@@ -238,13 +236,8 @@ export default function AssessmentPage() {
         // Assessment complete, save to localStorage temporarily
         localStorage.setItem("assessmentAnswers", JSON.stringify(updatedAnswers))
 
-        // Delete the draft since assessment is complete
-        deleteDraftAssessment(userInfo.id).catch((err) => {
-          console.error("Error deleting draft assessment:", err)
-        })
-
-        // Navigate to results page
-        router.push("/assessment/results")
+        // Save assessment to Supabase and navigate to results
+        saveAssessmentToSupabase(updatedAnswers, userInfo)
       } else {
         // Move to next pillar
         setCurrentPillarIndex(currentPillarIndex + 1)
@@ -255,6 +248,71 @@ export default function AssessmentPage() {
       // Move to next question in current pillar
       setCurrentQuestionIndex(currentQuestionIndex + 1)
       setSelectedOption(null)
+    }
+  }
+
+  // Function to save assessment to Supabase
+  const saveAssessmentToSupabase = async (
+    assessmentAnswers: Record<string, { questionId: string; optionId: string; score: number }>,
+    user: UserInfo,
+  ) => {
+    try {
+      // Calculate pillar scores
+      const pillarScores: Record<string, number> = {}
+      const pillarQuestionCounts: Record<string, number> = {}
+
+      // Calculate total score for each pillar
+      Object.entries(assessmentAnswers).forEach(([key, answer]) => {
+        const pillarName = key.split("-")[0]
+
+        if (!pillarScores[pillarName]) {
+          pillarScores[pillarName] = 0
+          pillarQuestionCounts[pillarName] = 0
+        }
+
+        pillarScores[pillarName] += answer.score
+        pillarQuestionCounts[pillarName]++
+      })
+
+      // Calculate average score for each pillar
+      Object.keys(pillarScores).forEach((pillar) => {
+        pillarScores[pillar] = pillarScores[pillar] / pillarQuestionCounts[pillar]
+      })
+
+      // Calculate overall score (average of pillar scores)
+      const overallScore =
+        Object.values(pillarScores).reduce((sum, score) => sum + score, 0) / Object.values(pillarScores).length
+
+      // Create assessment record
+      const assessment = await createAssessment(user.id, overallScore)
+
+      // Save pillar scores
+      await savePillarScores(assessment.id, pillarScores)
+
+      // Format answers for saving
+      const formattedAnswers: Record<string, { questionId: string; optionId: string }> = {}
+      Object.entries(assessmentAnswers).forEach(([key, answer]) => {
+        formattedAnswers[key] = {
+          questionId: answer.questionId,
+          optionId: answer.optionId,
+        }
+      })
+
+      // Save individual answers
+      await saveAnswers(assessment.id, formattedAnswers)
+
+      // Store assessment ID for results page
+      localStorage.setItem("currentAssessmentId", assessment.id)
+
+      // Navigate to results page
+      router.push("/assessment/results")
+    } catch (error) {
+      console.error("Error saving assessment:", error)
+      toast({
+        title: "Error saving assessment",
+        description: "There was a problem saving your assessment. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -331,27 +389,6 @@ export default function AssessmentPage() {
       <div className="mb-8 space-y-4">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-nairawise-dark">Financial Assessment</h1>
-          <div className="flex items-center gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSaveProgress}
-                    disabled={saving}
-                    className="flex items-center gap-1"
-                  >
-                    {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Save
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {lastSaved ? `Last saved: ${lastSaved}` : "Save your progress to continue later"}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
         </div>
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
@@ -362,7 +399,6 @@ export default function AssessmentPage() {
           </div>
           <Progress value={progress} className="h-2" />
         </div>
-        {lastSaved && <p className="text-xs text-nairawise-dark/60 text-right">Last saved: {lastSaved}</p>}
       </div>
 
       <Card className="mb-6">

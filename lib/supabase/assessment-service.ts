@@ -1,7 +1,6 @@
 import { createClientClient } from "./client"
 import { createServerClient } from "./server"
 import type { Database } from "./database.types"
-import { sendAssessmentResultsEmail as sendEmail } from "@/lib/email-service"
 
 export type Pillar = Database["public"]["Tables"]["pillars"]["Row"]
 export type Question = Database["public"]["Tables"]["questions"]["Row"] & {
@@ -83,7 +82,7 @@ export async function getAllQuestionsWithOptions() {
   return result
 }
 
-// Update the createUser function to include phone and marketing consent
+// Function to create a user
 export async function createUser(email: string, name: string, phone?: string, marketingConsent?: boolean) {
   const supabase = createClientClient()
 
@@ -147,22 +146,42 @@ export async function createUser(email: string, name: string, phone?: string, ma
 export async function createAssessment(userId: string, overallScore: number) {
   const supabase = createClientClient()
 
-  const { data, error } = await supabase
-    .from("assessments")
-    .insert({
-      user_id: userId,
-      overall_score: overallScore,
-      completed_at: new Date().toISOString(),
-    })
-    .select()
-    .single()
+  try {
+    // First, ensure we have a valid user in the database
+    let validUserId = userId
 
-  if (error) {
-    console.error("Error creating assessment:", error)
+    // Check if the userId is not a valid UUID (e.g., "user_1747230123251")
+    if (userId.startsWith("user_")) {
+      // Create a temporary user with this ID as a reference
+      const tempEmail = `temp_${userId}@example.com`
+      const tempName = `Temporary User ${userId}`
+
+      // Create or get user
+      const user = await createUser(tempEmail, tempName)
+      validUserId = user.id
+    }
+
+    // Now create the assessment with the valid user ID
+    const { data, error } = await supabase
+      .from("assessments")
+      .insert({
+        user_id: validUserId,
+        overall_score: overallScore,
+        completed_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Error creating assessment:", error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error in createAssessment:", error)
     throw error
   }
-
-  return data
 }
 
 // Function to save pillar scores
@@ -222,24 +241,6 @@ export async function saveAnswers(
   }
 
   return { success: true }
-}
-
-// Function to get recommendations for a score
-export async function getRecommendationsForScore(pillarId: string, score: number) {
-  const supabase = createClientClient()
-  const { data, error } = await supabase
-    .from("recommendations")
-    .select("*")
-    .eq("pillar_id", pillarId)
-    .lte("score_range_min", score)
-    .gte("score_range_max", score)
-
-  if (error) {
-    console.error("Error fetching recommendations:", error)
-    return []
-  }
-
-  return data
 }
 
 // Admin functions
@@ -313,22 +314,4 @@ export async function getAssessmentDetails(assessmentId: string) {
   }
 
   return data
-}
-
-// Function to send assessment results email
-export async function sendAssessmentResultsEmail(assessmentId: string) {
-  try {
-    const assessment = await getAssessmentDetails(assessmentId)
-
-    if (!assessment || !assessment.users?.email) {
-      throw new Error("Assessment or user email not found")
-    }
-
-    await sendEmail(assessment.users.email, assessment.users.name || "User", assessmentId, assessment.overall_score)
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error sending assessment results email:", error)
-    throw error
-  }
 }
